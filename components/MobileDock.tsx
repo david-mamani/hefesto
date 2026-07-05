@@ -8,7 +8,7 @@ const ITEMS = [
   { label: "Home", href: "/", Icon: HomeIcon, enabled: true },
   { label: "Chat", href: "/chat", Icon: ChatIcon, enabled: true },
   { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: true },
-  { label: "People", href: "/people", Icon: PeopleIcon, enabled: false },
+  { label: "People", href: "/people", Icon: PeopleIcon, enabled: true },
 ] as const;
 
 export function MobileDock() {
@@ -18,7 +18,7 @@ export function MobileDock() {
   return (
     <nav className="fixed bottom-[18px] left-1/2 -translate-x-1/2 w-[330px] h-[68px] glass rounded-[34px] grid grid-cols-4 items-center px-2 z-40">
       {ITEMS.map(({ label, href, Icon, enabled }) => {
-        const active = clean === href;
+        const active = clean === href || (href !== "/" && clean.startsWith(`${href}/`));
         const tone = active ? "var(--orange)" : "rgba(28,22,17,0.45)";
         const content = (
           <span className="flex flex-col items-center gap-[4px]">

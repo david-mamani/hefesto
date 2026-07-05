@@ -7,10 +7,11 @@
  *
  * What it does, against that user's own dataset (identity always derives from the
  * user, never from input):
- *   1. wipe the app registry (persons/person_data) and the Cognee dataset graph
- *   2. remember the fixed cast as real captures (ontology + node_set per cluster)
+ *   1. wipe the app registry (persons/person_data/capture_notes) and the Cognee graph
+ *   2. remember the fixed six-person cast as real captures (ontology + node_set)
  *   3. poll until every capture's graph is built
- *   4. record persons/person_data with STAGGERED last_interaction so warmth varies
+ *   4. record persons (full profile) + person_data + timeline notes with
+ *      STAGGERED last_interaction so warmth varies
  *   5. verify the guaranteed multi-hop: "who can intro me to someone in gaming?"
  *      → You → Leo → Maya (Ember Works, a gaming studio)
  */
@@ -105,6 +106,23 @@ const CAST: SeedPerson[] = [
     }),
   },
   {
+    slug: "carlos",
+    daysAgo: 5,
+    sourceText:
+      "Met Carlos Ruiz at DevFest. He's a fintech founder with two kids, into trail running, and he wants an intro to a designer.",
+    fields: fields({
+      name: "Carlos Ruiz",
+      cluster: "work",
+      role: "founder",
+      company: "a fintech startup",
+      relationship: "lead",
+      interests: ["trail running"],
+      metAtEvent: "DevFest",
+      facts: ["Carlos has two kids"],
+      commitments: ["wants an intro to a designer"],
+    }),
+  },
+  {
     slug: "sofia",
     daysAgo: 14,
     sourceText:
@@ -170,6 +188,7 @@ async function reset(
   const personIds = (persons ?? []).map((p) => p.person_id as string);
   if (personIds.length) {
     await sb.from("person_data").delete().in("person_id", personIds);
+    await sb.from("capture_notes").delete().eq("user_id", userId);
     await sb.from("persons").delete().eq("user_id", userId);
   }
 
@@ -301,6 +320,15 @@ async function main() {
         aliases: [],
         cluster: person.fields.cluster,
         last_interaction: daysAgo(person.daysAgo).toISOString(),
+        created_at: daysAgo(person.daysAgo).toISOString(),
+        role: person.fields.role,
+        company: person.fields.company,
+        relationship: person.fields.relationship,
+        interests: person.fields.interests,
+        facts: person.fields.facts,
+        commitments: person.fields.commitments,
+        met_at_event: person.fields.metAtEvent,
+        met_at_date: person.fields.metAtDate,
       })
       .select("person_id")
       .single();
@@ -312,6 +340,16 @@ async function main() {
       person_id: inserted.person_id,
       data_id: item.id,
       filename: `seed_${person.slug}.md`,
+    });
+    // Timeline entry (person card M07), dated like the capture itself.
+    const summary = person.sourceText.trim().replace(/\s+/g, " ");
+    await sb.from("capture_notes").insert({
+      filename: `seed_${person.slug}.md`,
+      user_id: userId,
+      person_id: inserted.person_id,
+      summary: summary.length > 90 ? `${summary.slice(0, 89).trimEnd()}…` : summary,
+      channel: "web",
+      created_at: daysAgo(person.daysAgo).toISOString(),
     });
     console.log(`  ✔ ${person.fields.name} (${person.fields.cluster}, ${person.daysAgo}d)`);
   }

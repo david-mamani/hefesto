@@ -1,21 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EmberGlow } from "@/components/EmberGlow";
 import { HefestoSprite } from "@/components/HefestoSprite";
 import { SpeechBubble } from "@/components/SpeechBubble";
+import { ThoughtBubble } from "@/components/ThoughtBubble";
 import { Composer } from "@/components/Composer";
 import { Briefing } from "@/components/Briefing";
 import { ChevronRightIcon } from "@/components/icons";
 import { useCapture } from "@/components/capture/useCapture";
 import { ReviewCapture } from "@/components/capture/ReviewCapture";
 import { ForgingCard } from "@/components/capture/ForgingCard";
+import type { ChatResponse } from "@/components/chat/ChatView";
 
 export type HomePlaceholders = {
   greeting: string;
   meeting: { time: string; when: string; title: string; note: string };
   suggestion: { text: string; cluster: string };
 };
+
+// Questions go to recall, statements go to capture — the same convention the
+// Telegram bot follows.
+const isQuestion = (text: string) => text.includes("?");
+
+const clip = (text: string, max = 140) =>
+  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+
+type AskState =
+  | { phase: "idle" }
+  | { phase: "thinking" }
+  | { phase: "answered"; data: ChatResponse }
+  | { phase: "error"; message: string };
 
 export function HomeExperience({
   placeholders,
@@ -27,6 +42,8 @@ export function HomeExperience({
   const capture = useCapture();
   const { state } = capture;
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [ask, setAsk] = useState<AskState>({ phase: "idle" });
+  const conversationRef = useRef<string | null>(null);
 
   // On open, push the cold-contact nudge to the user's linked Telegram (throttled
   // server-side). The Home card itself is already rendered from server data.
@@ -34,7 +51,48 @@ export function HomeExperience({
     fetch("/api/nudge", { method: "POST" }).catch(() => {});
   }, []);
 
+  // Home ask flow (PRD: the thought bubble is how Hefesto "thinks" a path).
+  // A walked path renders as his thought bubble; a plain answer as speech.
+  async function askHefesto(question: string) {
+    setAsk({ phase: "thinking" });
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: question,
+          conversationId: conversationRef.current ?? undefined,
+        }),
+      });
+      const data = (await res.json()) as ChatResponse & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Recall failed");
+      conversationRef.current = data.conversationId;
+      setAsk({ phase: "answered", data });
+    } catch (error) {
+      setAsk({
+        phase: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Something went sideways — ask me again.",
+      });
+    }
+  }
+
+  function handleSend(text: string) {
+    if (isQuestion(text)) {
+      void askHefesto(text);
+    } else {
+      setAsk({ phase: "idle" });
+      capture.start(text);
+    }
+  }
+
   const forging = state.phase === "forging" || state.phase === "done";
+  const thought =
+    state.phase === "idle" && ask.phase === "answered" && ask.data.path.length > 0
+      ? ask.data
+      : null;
   const bubbleText =
     state.phase === "forging"
       ? "Forging your memory…"
@@ -42,7 +100,13 @@ export function HomeExperience({
         ? `${state.canonicalName} is in your memory now.`
         : state.phase === "error"
           ? state.message
-          : placeholders.greeting;
+          : ask.phase === "thinking"
+            ? "Following the threads…"
+            : ask.phase === "error"
+              ? ask.message
+              : ask.phase === "answered"
+                ? clip(ask.data.text)
+                : placeholders.greeting;
 
   const forgingSummary =
     state.phase === "forging" || state.phase === "done"
@@ -90,10 +154,14 @@ export function HomeExperience({
       )}
 
       <div className={`flex justify-center ${forging ? "mt-8" : "mt-[10px]"}`}>
-        <SpeechBubble>{bubbleText}</SpeechBubble>
+        {thought ? (
+          <ThoughtBubble path={thought.path} caption={clip(thought.text, 110)} />
+        ) : (
+          <SpeechBubble>{bubbleText}</SpeechBubble>
+        )}
       </div>
 
-      <div className="flex justify-center -mt-[7px]">
+      <div className={`flex justify-center ${thought ? "mt-[20px]" : "-mt-[7px]"}`}>
         <HefestoSprite scale={6} />
       </div>
 
@@ -121,9 +189,11 @@ export function HomeExperience({
 
       <div className="mt-[26px]">
         <Composer
-          onSend={(text) => capture.start(text)}
+          onSend={handleSend}
           onVoice={(audio, seconds) => capture.startVoice(audio, seconds)}
-          disabled={state.phase === "extracting" || state.phase === "forging"}
+          disabled={
+            state.phase === "extracting" || state.phase === "forging" || ask.phase === "thinking"
+          }
         />
       </div>
 

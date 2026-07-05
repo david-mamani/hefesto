@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import type { NetworkPerson } from "@/lib/network";
-import { bandFor } from "@/lib/warmth";
-import { Briefing } from "@/components/Briefing";
-import { ForgetModal } from "@/components/ForgetModal";
 
 // Cluster → glow color (caption: GLOW = MODE · blue work / orange personal / green family)
 const MODE_GLOW: Record<string, string> = {
@@ -31,27 +28,7 @@ function place(people: NetworkPerson[]): Placed[] {
 
 export function GraphView({ people }: { people: NetworkPerson[] }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<NetworkPerson | null>(null);
-  const [briefingId, setBriefingId] = useState<string | null>(null);
-  const [forgetTarget, setForgetTarget] = useState<NetworkPerson | null>(null);
-  const [forgetBusy, setForgetBusy] = useState(false);
   const placed = place(people);
-
-  async function confirmForget() {
-    if (!forgetTarget) return;
-    setForgetBusy(true);
-    try {
-      await fetch("/api/forget", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personId: forgetTarget.personId }),
-      });
-    } finally {
-      setForgetBusy(false);
-      setForgetTarget(null);
-      router.refresh();
-    }
-  }
 
   if (people.length === 0) {
     return (
@@ -96,14 +73,14 @@ export function GraphView({ people }: { people: NetworkPerson[] }) {
         <span className="text-[13px] font-medium text-cream">You</span>
       </div>
 
-      {/* people */}
+      {/* people — tap opens the person card (M07) */}
       {placed.map((p, i) => {
         const glow = MODE_GLOW[p.cluster ?? "personal"] ?? MODE_GLOW.personal;
         return (
           <button
             key={p.personId}
             type="button"
-            onClick={() => setSelected(p)}
+            onClick={() => router.push(`/people/${p.personId}`)}
             className="graph-ember absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
             style={{
               left: `${p.x}%`,
@@ -133,117 +110,6 @@ export function GraphView({ people }: { people: NetworkPerson[] }) {
           </button>
         );
       })}
-
-      {selected && (
-        <PersonSheet
-          person={selected}
-          onClose={() => setSelected(null)}
-          onBriefing={() => {
-            setBriefingId(selected.personId);
-            setSelected(null);
-          }}
-          onForget={() => {
-            setForgetTarget(selected);
-            setSelected(null);
-          }}
-        />
-      )}
-
-      {briefingId && <Briefing personId={briefingId} onClose={() => setBriefingId(null)} />}
-
-      {forgetTarget && (
-        <ForgetModal
-          name={forgetTarget.name}
-          initial={forgetTarget.initial}
-          memoryCount={forgetTarget.memoryCount}
-          busy={forgetBusy}
-          onConfirm={confirmForget}
-          onCancel={() => setForgetTarget(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-/*
- * Tap-a-node sheet. Info-first here; the full person card (briefing + forget,
- * Figma M07/M13) is layered on in the memory phase.
- */
-function PersonSheet({
-  person,
-  onClose,
-  onBriefing,
-  onForget,
-}: {
-  person: NetworkPerson;
-  onClose: () => void;
-  onBriefing: () => void;
-  onForget: () => void;
-}) {
-  const band = bandFor(person.warmth.score);
-  const bandLabel = band === "warm" ? "Warm" : band === "cooling" ? "Cooling" : "Cold";
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/25" />
-      <div
-        className="relative w-full max-w-[430px] glass rounded-t-[28px] px-6 pt-5 pb-8 animate-[sheet-up_0.25s_ease-out]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/15" />
-        <div className="flex items-center gap-3">
-          <span
-            className="grid place-items-center size-[52px] rounded-full text-[18px] font-semibold text-white"
-            style={{ backgroundColor: person.warmth.color }}
-          >
-            {person.initial}
-          </span>
-          <div>
-            <p className="text-[18px] font-semibold text-ink">{person.name}</p>
-            <p className="micro-label text-[9px]">{person.cluster ?? "personal"}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-auto size-8 rounded-full bg-white/70 grid place-items-center text-ink text-[15px]"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="mt-5 flex gap-3">
-          <div className="flex-1 bg-surface-soft rounded-[18px] px-4 py-3">
-            <p className="micro-label text-[8.5px]">Warmth</p>
-            <p className="text-[22px] font-light text-ink leading-tight">
-              {person.warmth.score}
-              <span className="text-[12px] text-muted ml-1">{bandLabel}</span>
-            </p>
-          </div>
-          <div className="flex-1 bg-surface-soft rounded-[18px] px-4 py-3">
-            <p className="micro-label text-[8.5px]">Last seen</p>
-            <p className="text-[15px] font-medium text-ink leading-tight mt-[6px]">
-              {person.warmth.gap}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBriefing}
-            className="h-11 flex-1 rounded-full bg-ember text-cream text-[13px] font-medium"
-          >
-            Briefing
-          </button>
-          <button
-            type="button"
-            onClick={onForget}
-            className="h-11 px-6 rounded-full bg-white text-[13px] font-medium text-[#1C1611]"
-          >
-            Forget
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { SettingsIcon, PlusIcon } from "@/components/icons-desktop";
 
 const NAV = [
   { label: "Home", href: "/", Icon: HomeIcon, enabled: true },
-  { label: "People", href: "/people", Icon: PeopleIcon, enabled: false },
+  { label: "People", href: "/people", Icon: PeopleIcon, enabled: true },
   { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: true },
   { label: "Chat", href: "/chat", Icon: ChatIcon, enabled: true },
   { label: "Settings", href: "/settings", Icon: SettingsIcon, enabled: false },
@@ -32,7 +32,7 @@ export function DesktopSidebar({
 
       <nav className="mt-[54px] flex flex-col gap-2">
         {NAV.map(({ label, href, Icon, enabled }) => {
-          const active = clean === href;
+          const active = clean === href || (href !== "/" && clean.startsWith(`${href}/`));
           const inner = (
             <span
               className={`flex items-center gap-4 h-11 rounded-[22px] px-3 ${

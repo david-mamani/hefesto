@@ -34,23 +34,23 @@ function viaLabel(message: Message): string | null {
   return null;
 }
 
-function ThumbIcon({ down = false, active = false }: { down?: boolean; active?: boolean }) {
+// M02b feedback affordance: white circles with up/down arrows (down reads muted).
+function FeedbackArrow({ down = false, active = false }: { down?: boolean; active?: boolean }) {
   return (
     <svg
-      width="14"
+      width="12"
       height="14"
-      viewBox="0 0 14 14"
+      viewBox="0 0 12 14"
       fill="none"
       aria-hidden="true"
       style={down ? { transform: "rotate(180deg)" } : undefined}
     >
       <path
-        d="M4 6.5V12M4 6.5L6.5 1.8C7.4 1.8 8.3 2.5 8.3 3.6V5H11.2C12.1 5 12.7 5.8 12.5 6.6L11.6 10.9C11.5 11.5 10.9 12 10.3 12H4M4 6.5H1.5V12H4"
-        stroke={active ? "var(--orange)" : "#1C1611"}
-        strokeWidth="1.4"
+        d="M6 13V1M6 1L1.5 5.5M6 1L10.5 5.5"
+        stroke={active ? "var(--orange)" : down ? "#96897A" : "#1C1611"}
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 1 : 0.65}
       />
     </svg>
   );
@@ -168,17 +168,17 @@ export function ChatView({
                       type="button"
                       aria-label="Helpful"
                       onClick={() => giveFeedback(message, "up")}
-                      className="size-7 rounded-full bg-white/70 border border-white/90 grid place-items-center"
+                      className="size-[34px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
                     >
-                      <ThumbIcon active={message.feedback === "up"} />
+                      <FeedbackArrow active={message.feedback === "up"} />
                     </button>
                     <button
                       type="button"
                       aria-label="Not helpful"
                       onClick={() => giveFeedback(message, "down")}
-                      className="size-7 rounded-full bg-white/70 border border-white/90 grid place-items-center"
+                      className="size-[34px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
                     >
-                      <ThumbIcon down active={message.feedback === "down"} />
+                      <FeedbackArrow down active={message.feedback === "down"} />
                     </button>
                   </span>
                 )}

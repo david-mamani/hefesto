@@ -82,3 +82,66 @@ export async function getNetwork(userId: string): Promise<Network> {
 
   return { people, nudge };
 }
+
+export type PersonDetail = {
+  person: NetworkPerson & { metAtEvent: string | null; metAtDate: string | null };
+  timeline: { date: string; text: string }[];
+};
+
+/*
+ * One person, fully loaded for the card (M07/M10b): profile + warmth + the
+ * capture timeline. Ownership enforced by user_id — a foreign id yields null.
+ */
+export async function getPerson(userId: string, personId: string): Promise<PersonDetail | null> {
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("persons")
+    .select(
+      "person_id, canonical_name, cluster, last_interaction, created_at, role, company, relationship, interests, facts, commitments, met_at_event, met_at_date"
+    )
+    .eq("user_id", userId)
+    .eq("person_id", personId)
+    .maybeSingle();
+  if (!p) return null;
+
+  const [{ data: pd }, { data: notes }] = await Promise.all([
+    admin.from("person_data").select("created_at").eq("person_id", personId).order("created_at"),
+    admin
+      .from("capture_notes")
+      .select("summary, created_at")
+      .eq("person_id", personId)
+      .order("created_at"),
+  ]);
+
+  const timeline: { date: string; text: string }[] = [];
+  if (notes?.length) {
+    for (const note of notes) timeline.push({ date: note.created_at, text: note.summary });
+  } else if (p.met_at_event) {
+    timeline.push({ date: p.created_at, text: `Met at ${p.met_at_event}` });
+  } else {
+    // Captures recorded before note summaries existed.
+    for (const row of pd ?? []) timeline.push({ date: row.created_at, text: "Memory captured" });
+  }
+
+  return {
+    person: {
+      personId: p.person_id,
+      name: p.canonical_name,
+      initial: (p.canonical_name?.trim()?.[0] ?? "?").toUpperCase(),
+      cluster: p.cluster,
+      lastInteraction: p.last_interaction,
+      createdAt: p.created_at,
+      warmth: warmthOf(p.last_interaction),
+      memoryCount: pd?.length ?? 0,
+      role: p.role ?? null,
+      company: p.company ?? null,
+      relationship: p.relationship ?? null,
+      interests: p.interests ?? [],
+      facts: p.facts ?? [],
+      commitments: p.commitments ?? [],
+      metAtEvent: p.met_at_event ?? null,
+      metAtDate: p.met_at_date ?? null,
+    },
+    timeline,
+  };
+}

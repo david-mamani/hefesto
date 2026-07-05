@@ -3,7 +3,12 @@ import { RingAvatar } from "@/components/RingAvatar";
 import { HefestoSprite } from "@/components/HefestoSprite";
 import { ChatView } from "@/components/chat/ChatView";
 
-export default async function ChatPage() {
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,7 +26,7 @@ export default async function ChatPage() {
         <HefestoSprite scale={2} className="ml-auto -mt-3" />
       </header>
 
-      <ChatView />
+      <ChatView initialQuestion={q?.trim() || undefined} />
     </main>
   );
 }

@@ -136,6 +136,16 @@ export async function saveCapture(input: SaveCaptureInput): Promise<SaveCaptureR
     .update({ last_interaction: new Date().toISOString() })
     .eq("person_id", personId);
 
+  // Timeline entry for the person card (M07) — a short slice of the raw note.
+  const summary = input.sourceText.trim().replace(/\s+/g, " ");
+  await admin.from("capture_notes").insert({
+    filename,
+    user_id: input.userId,
+    person_id: personId,
+    summary: summary.length > 90 ? `${summary.slice(0, 89).trimEnd()}…` : summary,
+    channel: input.channel,
+  });
+
   return { personId, canonicalName, filename, datasetId: memory.datasetId };
 }
 
