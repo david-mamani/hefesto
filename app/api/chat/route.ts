@@ -47,6 +47,47 @@ function modeFor(cluster: string | null | undefined): "networking" | "personal" 
   return "personal";
 }
 
+// Keep answers short and human — and phrase referrals as "X can introduce you to Y"
+// so the path can be walked from the sentence.
+const CHAT_SYSTEM_PROMPT =
+  "You are Hefesto, a warm relationship-memory assistant. Answer in ONE short, natural sentence " +
+  "grounded only in the user's memories. When the answer is a referral, name who can make the " +
+  "introduction and to whom, e.g. 'Leo can introduce you to Maya, who runs a gaming studio.' " +
+  "Never use bullet points or lists.";
+
+const REFERRAL_PATTERNS = [
+  /\b([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)\s+can\s+introduce\s+you\s+to\s+([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)/u,
+  /\b([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)\s+can\s+put\s+you\s+in\s+touch\s+with\s+([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)/u,
+  /\b([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)\s+can\s+connect\s+you\s+(?:with|to)\s+([A-Z][\p{L}'.-]*(?:\s+[A-Z][\p{L}'.-]*)*)/u,
+];
+
+function parseReferral(answer: string): { connector: string; target: string } | null {
+  for (const re of REFERRAL_PATTERNS) {
+    const m = answer.match(re);
+    if (m) return { connector: m[1].trim(), target: m[2].trim() };
+  }
+  return null;
+}
+
+type PersonRow = {
+  person_id: string;
+  canonical_name: string;
+  aliases: string[] | null;
+  cluster: ChatPathPerson["cluster"];
+};
+
+function matchPerson(name: string, persons: PersonRow[]): ChatPathPerson | null {
+  const norm = name.trim().toLowerCase();
+  const first = norm.split(/\s+/)[0];
+  for (const p of persons) {
+    const names = [p.canonical_name.toLowerCase(), ...(p.aliases ?? []).map((a) => a.toLowerCase())];
+    if (names.some((n) => n === norm || n.split(/\s+/)[0] === first)) {
+      return { personId: p.person_id, name: p.canonical_name, cluster: p.cluster };
+    }
+  }
+  return null;
+}
+
 /** Deep-scan a JSON value for the last occurrence of a given key. */
 function findLastKey(value: unknown, key: string): unknown {
   let found: unknown;
@@ -114,6 +155,7 @@ export async function POST(request: Request) {
         datasets: [memory.datasetName],
         sessionId: cogneeSessionId,
         includeReferences: true,
+        systemPrompt: CHAT_SYSTEM_PROMPT,
       });
     } catch (error) {
       if (error instanceof StillMemorizingError) {
@@ -123,6 +165,7 @@ export async function POST(request: Request) {
           text: "I'm still forging your memories — give me a moment and ask again.",
           evidence: [],
           path: [],
+          sources: [],
           qaId: null,
           mode: "personal",
           pending: true,
@@ -140,8 +183,9 @@ export async function POST(request: Request) {
     const { text, evidence: evidenceBlock } = splitEvidence(answerText);
     const evidence = parseEvidence(evidenceBlock);
 
-    // path[] is derived app-side: cited data_ids → person_data → persons (§17.C)
-    let path: ChatPathPerson[] = [];
+    // Map cited data_ids → captured persons (§17.C) — feeds the "via" sources and
+    // the single-hop fallback path.
+    const citedPersons: ChatPathPerson[] = [];
     if (evidence.length) {
       const dataIds = [...new Set(evidence.map((e) => e.dataId))];
       const { data: rows } = await admin
@@ -162,11 +206,7 @@ export async function POST(request: Request) {
             };
             return [
               r.data_id,
-              {
-                personId: person.person_id,
-                name: person.canonical_name,
-                cluster: person.cluster,
-              },
+              { personId: person.person_id, name: person.canonical_name, cluster: person.cluster },
             ] as const;
           })
       );
@@ -176,9 +216,38 @@ export async function POST(request: Request) {
         entry.personName = person?.name ?? null;
         if (person && !seen.has(person.personId)) {
           seen.add(person.personId);
-          path.push(person);
+          citedPersons.push(person);
         }
       }
+    }
+
+    // The path preferentially follows the referral named in the answer
+    // ("X can introduce you to Y") so the walk reads You → X → Y — even when Y is a
+    // second-degree entity (not a captured contact). Direct answers fall back to the
+    // people actually cited.
+    let path: ChatPathPerson[] = citedPersons;
+    const referral = parseReferral(text);
+    if (referral) {
+      const { data: allPersons } = await admin
+        .from("persons")
+        .select("person_id, canonical_name, aliases, cluster")
+        .eq("user_id", user.id);
+      const persons = (allPersons ?? []) as PersonRow[];
+      const connector =
+        matchPerson(referral.connector, persons) ??
+        ({ personId: "", name: referral.connector, cluster: null } as ChatPathPerson);
+      const target =
+        matchPerson(referral.target, persons) ??
+        ({ personId: "", name: referral.target, cluster: null } as ChatPathPerson);
+      path = connector.name === target.name ? [connector] : [connector, target];
+    }
+
+    // "via" = the notes behind the answer. For a referral, that's the connector's
+    // memory (the target has no note); otherwise every cited person.
+    let sources = [...new Set(citedPersons.map((p) => p.name))];
+    if (referral) {
+      const pathSources = path.filter((p) => p.personId).map((p) => p.name);
+      if (pathSources.length) sources = pathSources;
     }
 
     // qa_id is not in the recall response — it lives in the session's QA entries
@@ -196,6 +265,7 @@ export async function POST(request: Request) {
       text,
       evidence,
       path,
+      sources,
       qaId,
       mode: modeFor(path[0]?.cluster),
     });

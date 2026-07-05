@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/Composer";
 import { ChatMessageBubble, TypingIndicator, type ChatMessage } from "@/components/ChatMessages";
+import { PathCard } from "@/components/chat/PathCard";
 import type { ChatEvidence, ChatPathPerson } from "@/app/api/chat/route";
 
 export type ChatResponse = {
@@ -11,6 +12,7 @@ export type ChatResponse = {
   text: string;
   evidence: ChatEvidence[];
   path: ChatPathPerson[];
+  sources: string[];
   qaId: string | null;
   mode: "networking" | "personal" | "family";
   pending?: boolean;
@@ -19,6 +21,7 @@ export type ChatResponse = {
 type Message = ChatMessage & {
   evidence?: ChatEvidence[];
   path?: ChatPathPerson[];
+  sources?: string[];
   qaId?: string | null;
   sessionId?: string;
   feedback?: "up" | "down";
@@ -95,6 +98,7 @@ export function ChatView({
             text: data.text,
             evidence: data.evidence,
             path: data.path,
+            sources: data.sources,
             qaId: data.qaId,
             sessionId: data.sessionId,
           },
@@ -148,9 +152,16 @@ export function ChatView({
         {messages.map((message) => (
           <div key={message.id}>
             <ChatMessageBubble message={message} />
-            {message.role === "hefesto" && viaLabel(message) && (
+
+            {message.role === "hefesto" && !!message.path?.length && (
+              <PathCard path={message.path} sources={message.sources} />
+            )}
+
+            {message.role === "hefesto" && (message.qaId || (!message.path?.length && viaLabel(message))) && (
               <div className="flex items-center gap-3 mt-2 ml-1">
-                <p className="text-[10.5px] text-muted">via: {viaLabel(message)}</p>
+                {!message.path?.length && viaLabel(message) && (
+                  <p className="text-[10.5px] text-muted">via: {viaLabel(message)}</p>
+                )}
                 {message.qaId && (
                   <span className="flex items-center gap-2">
                     <button

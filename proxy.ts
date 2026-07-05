@@ -27,7 +27,8 @@ function isSharedPath(pathname: string): boolean {
   return (
     pathname === "/login" ||
     pathname.startsWith("/auth/") ||
-    pathname.startsWith("/api/")
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/dev/") // device-agnostic dev tools (mascot playground), no auth
   );
 }
 
