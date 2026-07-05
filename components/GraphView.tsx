@@ -113,16 +113,19 @@ export function GraphView({ people }: { people: NetworkPerson[] }) {
             aria-label={`${p.name}, warmth ${p.warmth.score}`}
           >
             <span
-              className="grid place-items-center size-[44px] rounded-full text-[14px] font-semibold text-white"
+              className="grid place-items-center size-[44px] rounded-full text-[14px] font-semibold text-ink"
               style={{
                 backgroundColor: p.warmth.color,
-                boxShadow: `0 0 20px 3px ${glow}59, 0 8px 18px rgba(51,31,10,0.16)`,
+                // M08: the mode glow is wide and falls softly below the node.
+                boxShadow: `0 0 24px 5px ${glow}55, 0 16px 34px 2px ${glow}3d, 0 8px 18px rgba(51,31,10,0.14)`,
               }}
             >
               {p.initial}
             </span>
             <span className="absolute top-full left-1/2 -translate-x-1/2 mt-[5px] w-[74px] text-center">
-              <span className="block text-[10px] font-medium text-ink leading-tight">{p.name}</span>
+              <span className="block text-[10px] font-medium text-ink leading-tight">
+                {p.name.split(" · ")[0].split(/\s+/)[0]}
+              </span>
               <span className="block micro-label text-[8.5px] tracking-[0.68px] mt-[1px]">
                 {p.cluster ?? "personal"}
               </span>

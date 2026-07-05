@@ -6,11 +6,14 @@ import { telegram } from "@/lib/telegram";
 
 /*
  * On-open nudge → Telegram. When Home loads and a contact is going cold, the nudge
- * is also pushed to the user's linked Telegram chat. Throttled in-memory so a burst
- * of reloads doesn't spam the chat (the Home card itself is rendered server-side).
+ * is also pushed to the user's linked Telegram chat — at most one proactive push
+ * per user per day (PRD §6.11), tracked via persons.last_nudge_at. A delivered
+ * nudge marks the person, which starts their 7-day re-nudge cooldown (§17.1.5).
+ * The in-memory throttle only guards against reload bursts within one instance.
  */
 const lastSent = new Map<number, number>();
 const THROTTLE_MS = 60_000;
+const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export async function POST() {
   const supabase = await createClient();
@@ -40,11 +43,36 @@ export async function POST() {
     if (now - (lastSent.get(chatId) ?? 0) < THROTTLE_MS) {
       return NextResponse.json({ nudge, sent: false, throttled: true });
     }
+
+    // Max one proactive push per user per day — the most recent nudge across the
+    // user's people is the last time we proactively reached out.
+    const { data: recent } = await admin
+      .from("persons")
+      .select("last_nudge_at")
+      .eq("user_id", user.id)
+      .not("last_nudge_at", "is", null)
+      .order("last_nudge_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (recent?.last_nudge_at && now - new Date(recent.last_nudge_at).getTime() < DAILY_WINDOW_MS) {
+      return NextResponse.json({ nudge, sent: false, throttled: true });
+    }
     lastSent.set(chatId, now);
 
-    await telegram.sendMessage(chatId, `🐱 <b>${nudge.message}</b>`).catch(() => {});
+    const delivered = await telegram
+      .sendMessage(chatId, `🐱 <b>${nudge.message}</b>`)
+      .then(() => true)
+      .catch(() => false);
 
-    return NextResponse.json({ nudge, sent: true });
+    if (delivered) {
+      await admin
+        .from("persons")
+        .update({ last_nudge_at: new Date(now).toISOString() })
+        .eq("user_id", user.id)
+        .eq("person_id", nudge.personId);
+    }
+
+    return NextResponse.json({ nudge, sent: delivered });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Nudge failed" },

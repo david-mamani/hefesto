@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { RingAvatar } from "@/components/RingAvatar";
 import { HomeExperience } from "@/components/HomeExperience";
 import { getNetwork } from "@/lib/network";
+import { knowledgeLines } from "@/lib/person";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,9 @@ export default async function HomePage() {
   const initial = (displayName[0] ?? "H").toUpperCase();
 
   const network = user ? await getNetwork(user.id) : { people: [], nudge: null };
+  // On-open nudge speaks through Hefesto's bubble (PRD §6.12) — the Suggested
+  // card below carries the same reconnection with its cluster chip.
+  const greeting = network.nudge ? network.nudge.message : PLACEHOLDERS.greeting;
   const suggestion = network.nudge
     ? {
         text: `Reconnect with ${network.nudge.name.split(/\s+/)[0]} — ${network.nudge.warmth.gap}`,
@@ -44,7 +48,13 @@ export default async function HomePage() {
   // person so tapping it opens their real, memory-grounded briefing.
   const featured = network.people[0] ?? null;
   const meeting = featured
-    ? { ...PLACEHOLDERS.meeting, title: `Coffee with ${featured.name}` }
+    ? {
+        ...PLACEHOLDERS.meeting,
+        title: `Coffee with ${featured.name}`,
+        note:
+          knowledgeLines(featured, 2).join(" · ") ||
+          "You'll know more after the next capture",
+      }
     : PLACEHOLDERS.meeting;
 
   return (
@@ -55,7 +65,7 @@ export default async function HomePage() {
       </header>
 
       <HomeExperience
-        placeholders={{ ...PLACEHOLDERS, suggestion, meeting }}
+        placeholders={{ ...PLACEHOLDERS, greeting, suggestion, meeting }}
         featuredPersonId={featured?.personId ?? null}
       />
     </main>

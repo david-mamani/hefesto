@@ -25,6 +25,17 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Ownership first: the polled person must belong to the caller — fail fast
+    // instead of spending Cognee calls on (or leaking timing about) foreign ids.
+    const admin = createAdminClient();
+    const { data: person } = await admin
+      .from("persons")
+      .select("person_id")
+      .eq("user_id", user.id)
+      .eq("person_id", personId)
+      .maybeSingle();
+    if (!person) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+
     const memory = await ensureProvisioned(user.id);
 
     const items = await datasets.data(memory.datasetId).catch(() => []);
@@ -40,15 +51,6 @@ export async function GET(request: Request) {
     if (!/completed/i.test(statusText)) {
       return NextResponse.json({ status: "forging" });
     }
-
-    const admin = createAdminClient();
-    const { data: person } = await admin
-      .from("persons")
-      .select("person_id")
-      .eq("user_id", user.id)
-      .eq("person_id", personId)
-      .maybeSingle();
-    if (!person) return NextResponse.json({ error: "Person not found" }, { status: 404 });
 
     await admin.from("person_data").upsert({
       person_id: personId,

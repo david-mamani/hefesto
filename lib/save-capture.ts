@@ -26,6 +26,19 @@ export type SaveCaptureResult = {
   datasetId: string;
 };
 
+// Union that preserves first-seen order — repeated captures about the same
+// person accumulate facts instead of overwriting them.
+function mergeList(current: string[] | null, incoming: string[]): string[] {
+  const merged = [...(current ?? [])];
+  for (const entry of incoming) {
+    const value = entry.trim();
+    if (value && !merged.some((m) => m.toLowerCase() === value.toLowerCase())) {
+      merged.push(value);
+    }
+  }
+  return merged;
+}
+
 export async function saveCapture(input: SaveCaptureInput): Promise<SaveCaptureResult> {
   const memory = await ensureProvisioned(input.userId);
   const admin = createAdminClient();
@@ -37,13 +50,31 @@ export async function saveCapture(input: SaveCaptureInput): Promise<SaveCaptureR
   if (input.resolution === "existing" && input.personId) {
     const { data: person, error } = await admin
       .from("persons")
-      .select("person_id, canonical_name")
+      .select(
+        "person_id, canonical_name, role, company, relationship, interests, facts, commitments, met_at_event, met_at_date"
+      )
       .eq("user_id", input.userId)
       .eq("person_id", input.personId)
       .single();
     if (error || !person) throw new Error("Person not found");
     personId = person.person_id;
     canonicalName = person.canonical_name;
+
+    // Merge the confirmed extraction into the person profile (PRD §17.A):
+    // scalars update when the new capture provides them, lists accumulate.
+    await admin
+      .from("persons")
+      .update({
+        role: input.fields.role ?? person.role,
+        company: input.fields.company ?? person.company,
+        relationship: input.fields.relationship ?? person.relationship,
+        interests: mergeList(person.interests, input.fields.interests),
+        facts: mergeList(person.facts, input.fields.facts),
+        commitments: mergeList(person.commitments, input.fields.commitments),
+        met_at_event: person.met_at_event ?? input.fields.metAtEvent,
+        met_at_date: person.met_at_date ?? input.fields.metAtDate,
+      })
+      .eq("person_id", personId);
   } else {
     canonicalName = name;
     // Same exact name in Cognee merges (deterministic UUID5) — a NEW person with a
@@ -67,6 +98,14 @@ export async function saveCapture(input: SaveCaptureInput): Promise<SaveCaptureR
         aliases: canonicalName === name ? [] : [name],
         cluster: input.fields.cluster,
         last_interaction: new Date().toISOString(),
+        role: input.fields.role,
+        company: input.fields.company,
+        relationship: input.fields.relationship,
+        interests: input.fields.interests.filter((i) => i.trim()),
+        facts: input.fields.facts.filter((f) => f.trim()),
+        commitments: input.fields.commitments.filter((c) => c.trim()),
+        met_at_event: input.fields.metAtEvent,
+        met_at_date: input.fields.metAtDate,
       })
       .select("person_id")
       .single();

@@ -71,6 +71,35 @@ export function warmthOf(
   return { score, band: bandFor(score), days, color: warmthColor(score), gap: humanizeGap(days) };
 }
 
+/*
+ * Retroactive warmth series — warmth is a pure function of last_interaction, so
+ * the last N days can be reconstructed without stored history: at a past day t,
+ * a person contributes exp-decay from their last interaction BEFORE t (0 if we
+ * only met them afterwards). Feeds the "Network warmth · last 30 days" chart.
+ */
+export function warmthSeries(
+  people: { lastInteraction: string | null; createdAt?: string | null }[],
+  days = 30,
+  now: Date = new Date()
+): number[] {
+  const series: number[] = [];
+  for (let back = days - 1; back >= 0; back--) {
+    const t = now.getTime() - back * MS_PER_DAY;
+    let sum = 0;
+    let count = 0;
+    for (const person of people) {
+      const created = person.createdAt ? new Date(person.createdAt).getTime() : null;
+      if (created !== null && created > t) continue; // didn't exist yet
+      count++;
+      const li = person.lastInteraction ? new Date(person.lastInteraction).getTime() : null;
+      if (li === null || li > t) continue; // no interaction before t → cold
+      sum += 100 * Math.exp(-((t - li) / MS_PER_DAY) / HALF_LIFE_DAYS);
+    }
+    series.push(count === 0 ? 0 : Math.round(sum / count));
+  }
+  return series;
+}
+
 // ---------- Nudge selection ----------
 
 export type NudgeCandidate = {
@@ -89,16 +118,17 @@ export type Nudge = {
   message: string;
 };
 
-// Don't re-nudge the same person within this window.
-const NUDGE_COOLDOWN_DAYS = 5;
+// Don't re-nudge the same person within this window (PRD §17.1.5).
+const NUDGE_COOLDOWN_DAYS = 7;
 
 function firstName(name: string): string {
   return name.split(/\s+/)[0] || name;
 }
 
 /*
- * Pick the single coldest contact worth reconnecting with: below the WARM band
- * and not nudged within the cooldown. Returns null when everyone is warm.
+ * Pick the single coldest contact worth reconnecting with: in the COLD band
+ * (warmth < 30, PRD §17.1.5) and not nudged within the cooldown. Returns null
+ * when nobody has gone cold.
  */
 export function selectNudge(
   candidates: NudgeCandidate[],
@@ -107,7 +137,7 @@ export function selectNudge(
   let best: Nudge | null = null;
   for (const candidate of candidates) {
     const warmth = warmthOf(candidate.lastInteraction, now);
-    if (warmth.band === "warm") continue;
+    if (warmth.band !== "cold") continue;
     if (candidate.lastNudgeAt) {
       const sinceNudge =
         (now.getTime() - new Date(candidate.lastNudgeAt).getTime()) / MS_PER_DAY;

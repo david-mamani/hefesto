@@ -20,12 +20,12 @@ export default async function GraphPage() {
     <main className="px-6 flex flex-col min-h-[calc(100dvh-104px)]">
       <header className="flex items-center gap-3 pt-12">
         <RingAvatar initial={initial} />
-        <h1 className="font-semibold text-[26px] text-ink">Your network</h1>
+        <h1 className="font-semibold text-[24px] text-ink">Your network</h1>
       </header>
 
       <GraphView people={people} />
 
-      <p className="micro-label text-center text-[8.5px] tracking-[0.9px] pb-1 leading-relaxed">
+      <p className="micro-label text-center text-[9px] tracking-[0.9px] pb-1 leading-relaxed">
         Glow = mode (blue work · orange personal · green family) · node = warmth
       </p>
     </main>

@@ -9,7 +9,7 @@ import { SettingsIcon, PlusIcon } from "@/components/icons-desktop";
 const NAV = [
   { label: "Home", href: "/", Icon: HomeIcon, enabled: true },
   { label: "People", href: "/people", Icon: PeopleIcon, enabled: false },
-  { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: false },
+  { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: true },
   { label: "Chat", href: "/chat", Icon: ChatIcon, enabled: true },
   { label: "Settings", href: "/settings", Icon: SettingsIcon, enabled: false },
 ] as const;
