@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/*
+  Hefesto design tokens — warm glass.
+  Light is the default theme; dark overrides live under [data-theme="dark"].
+  Mode colors tint glows/accents only — never the page background, never the mascot.
+*/
+:root {
+  --bg: #efe7dc;
+  --ink: #1c1611;
+  --muted: #96897a;
+  --orange: #f07e12;
+  --peach: #ffc490;
+  --green: #3fb57f;
+  --yellow: #e9c258;
+  --ember: #17120d;
+  --cream: #f6f1e8;
+
+  --surface: #ffffff;
+  --surface-soft: #fbf8f2;
+  --input: #f3ede3;
+  --input-border: rgba(255, 255, 255, 0.9);
+
+  --glass-bg: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glass-dark-bg: rgba(36, 30, 24, 0.55);
+  --glass-dark-border: rgba(255, 255, 255, 0.14);
+
+  --shadow-soft: 0px 16px 38px 0px rgba(51, 31, 10, 0.06);
+  --shadow-card: 0px 16px 38px 0px rgba(51, 31, 10, 0.1);
+  --shadow-deep: 0px 16px 38px 0px rgba(51, 31, 10, 0.16);
+  --shadow-dark: 0px 16px 38px 0px rgba(51, 31, 10, 0.22);
+
+  --mode-networking: #2f6bff;
+  --mode-personal: #f07e12;
+  --mode-family: #3fb57f;
+  --mode: var(--mode-personal);
+}
+
+[data-theme="dark"] {
+  --bg: #1a1210;
+  --ink: #f6f1e8;
+  --muted: #a6988a;
+
+  --surface: rgba(255, 255, 255, 0.12);
+  --surface-soft: #241c16;
+  --input: #241c16;
+  --input-border: rgba(255, 255, 255, 0.15);
+
+  --glass-bg: rgba(42, 33, 26, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.12);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-orange: var(--orange);
+  --color-peach: var(--peach);
+  --color-green: var(--green);
+  --color-yellow: var(--yellow);
+  --color-ember: var(--ember);
+  --color-cream: var(--cream);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-input: var(--input);
+  --color-networking: var(--mode-networking);
+  --color-personal: var(--mode-personal);
+  --color-family: var(--mode-family);
+  --color-mode: var(--mode);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-deep: var(--shadow-deep);
+  --shadow-dark: var(--shadow-dark);
+
+  --font-sans: var(--font-poppins), sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-poppins), sans-serif;
+}
+
+/* Frosted glass card — light and dark variants from the design system */
+.glass {
+  background: var(--glass-bg);
+  border: 1.5px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-dark {
+  background: var(--glass-dark-bg);
+  border: 1px solid var(--glass-dark-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-dark);
+}
+
+/* Micro label — tracked uppercase Poppins Medium */
+.micro-label {
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
