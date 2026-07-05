@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="http://hefesto.org/ontology/relationships"
+         xmlns="http://hefesto.org/ontology/relationships#">
+
+  <owl:Ontology rdf:about="http://hefesto.org/ontology/relationships">
+    <rdfs:label>Hefesto relationship memory ontology</rdfs:label>
+    <rdfs:comment>Vocabulary for a personal relationship memory: the people you meet, where you met them, what they do, what they care about, and what was promised.</rdfs:comment>
+  </owl:Ontology>
+
+  <!-- Classes -->
+
+  <owl:Class rdf:about="#Person">
+    <rdfs:label>Person</rdfs:label>
+    <rdfs:comment>A person in the user's network.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Company">
+    <rdfs:label>Company</rdfs:label>
+    <rdfs:comment>A company or organization a person works at or is associated with.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Role">
+    <rdfs:label>Role</rdfs:label>
+    <rdfs:comment>A professional role or job title, e.g. designer, founder, engineer.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Interest">
+    <rdfs:label>Interest</rdfs:label>
+    <rdfs:comment>Something a person likes or cares about, e.g. hiking, speedruns, fintech.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Event">
+    <rdfs:label>Event</rdfs:label>
+    <rdfs:comment>Where or how the user met a person, e.g. a conference, a party, an introduction.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#RelationshipType">
+    <rdfs:label>RelationshipType</rdfs:label>
+    <rdfs:comment>The kind of relationship: friend, family, colleague, client or lead.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Commitment">
+    <rdfs:label>Commitment</rdfs:label>
+    <rdfs:comment>Something promised or wanted: what the user owes a person or what that person is looking for.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="#Place">
+    <rdfs:label>Place</rdfs:label>
+    <rdfs:comment>A geographic place: a city, a venue, a country.</rdfs:comment>
+  </owl:Class>
+
+  <!-- Object properties -->
+
+  <owl:ObjectProperty rdf:about="#knows">
+    <rdfs:label>knows</rdfs:label>
+    <rdfs:comment>A person knows another person.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Person"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#works_at">
+    <rdfs:label>works_at</rdfs:label>
+    <rdfs:comment>A person works at a company.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Company"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#has_role">
+    <rdfs:label>has_role</rdfs:label>
+    <rdfs:comment>A person has a professional role.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Role"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#interested_in">
+    <rdfs:label>interested_in</rdfs:label>
+    <rdfs:comment>A person is interested in something.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Interest"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#met_at">
+    <rdfs:label>met_at</rdfs:label>
+    <rdfs:comment>The user met a person at an event.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Event"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#related_as">
+    <rdfs:label>related_as</rdfs:label>
+    <rdfs:comment>The kind of relationship the user has with a person.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#RelationshipType"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#wants">
+    <rdfs:label>wants</rdfs:label>
+    <rdfs:comment>A person wants something or was promised something.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+    <rdfs:range rdf:resource="#Commitment"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="#mentioned">
+    <rdfs:label>mentioned</rdfs:label>
+    <rdfs:comment>A person mentioned another entity in conversation.</rdfs:comment>
+    <rdfs:domain rdf:resource="#Person"/>
+  </owl:ObjectProperty>
+
+</rdf:RDF>

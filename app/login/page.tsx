@@ -60,6 +60,9 @@ export default function LoginPage() {
       return;
     }
 
+    // Provision the user's memory (idempotent); failures retry on first capture
+    await fetch("/api/provision", { method: "POST" }).catch(() => {});
+
     router.replace("/");
     router.refresh();
   }
