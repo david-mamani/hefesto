@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmberGlow } from "@/components/EmberGlow";
 import { HefestoSprite } from "@/components/HefestoSprite";
 import { SpeechBubble } from "@/components/SpeechBubble";
@@ -27,6 +27,12 @@ export function HomeExperience({
   const capture = useCapture();
   const { state } = capture;
   const [briefingOpen, setBriefingOpen] = useState(false);
+
+  // On open, push the cold-contact nudge to the user's linked Telegram (throttled
+  // server-side). The Home card itself is already rendered from server data.
+  useEffect(() => {
+    fetch("/api/nudge", { method: "POST" }).catch(() => {});
+  }, []);
 
   const forging = state.phase === "forging" || state.phase === "done";
   const bubbleText =
