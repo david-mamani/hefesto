@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import type { NetworkPerson } from "@/lib/network";
 import { bandFor } from "@/lib/warmth";
+import { Briefing } from "@/components/Briefing";
+import { ForgetModal } from "@/components/ForgetModal";
 
 // Cluster → glow color (caption: GLOW = MODE · blue work / orange personal / green family)
 const MODE_GLOW: Record<string, string> = {
@@ -27,8 +30,28 @@ function place(people: NetworkPerson[]): Placed[] {
 }
 
 export function GraphView({ people }: { people: NetworkPerson[] }) {
+  const router = useRouter();
   const [selected, setSelected] = useState<NetworkPerson | null>(null);
+  const [briefingId, setBriefingId] = useState<string | null>(null);
+  const [forgetTarget, setForgetTarget] = useState<NetworkPerson | null>(null);
+  const [forgetBusy, setForgetBusy] = useState(false);
   const placed = place(people);
+
+  async function confirmForget() {
+    if (!forgetTarget) return;
+    setForgetBusy(true);
+    try {
+      await fetch("/api/forget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personId: forgetTarget.personId }),
+      });
+    } finally {
+      setForgetBusy(false);
+      setForgetTarget(null);
+      router.refresh();
+    }
+  }
 
   if (people.length === 0) {
     return (
@@ -108,7 +131,33 @@ export function GraphView({ people }: { people: NetworkPerson[] }) {
         );
       })}
 
-      {selected && <PersonSheet person={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <PersonSheet
+          person={selected}
+          onClose={() => setSelected(null)}
+          onBriefing={() => {
+            setBriefingId(selected.personId);
+            setSelected(null);
+          }}
+          onForget={() => {
+            setForgetTarget(selected);
+            setSelected(null);
+          }}
+        />
+      )}
+
+      {briefingId && <Briefing personId={briefingId} onClose={() => setBriefingId(null)} />}
+
+      {forgetTarget && (
+        <ForgetModal
+          name={forgetTarget.name}
+          initial={forgetTarget.initial}
+          memoryCount={forgetTarget.memoryCount}
+          busy={forgetBusy}
+          onConfirm={confirmForget}
+          onCancel={() => setForgetTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -117,7 +166,17 @@ export function GraphView({ people }: { people: NetworkPerson[] }) {
  * Tap-a-node sheet. Info-first here; the full person card (briefing + forget,
  * Figma M07/M13) is layered on in the memory phase.
  */
-function PersonSheet({ person, onClose }: { person: NetworkPerson; onClose: () => void }) {
+function PersonSheet({
+  person,
+  onClose,
+  onBriefing,
+  onForget,
+}: {
+  person: NetworkPerson;
+  onClose: () => void;
+  onBriefing: () => void;
+  onForget: () => void;
+}) {
   const band = bandFor(person.warmth.score);
   const bandLabel = band === "warm" ? "Warm" : band === "cooling" ? "Cooling" : "Cold";
   return (
@@ -163,6 +222,23 @@ function PersonSheet({ person, onClose }: { person: NetworkPerson; onClose: () =
               {person.warmth.gap}
             </p>
           </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBriefing}
+            className="h-11 flex-1 rounded-full bg-ember text-cream text-[13px] font-medium"
+          >
+            Briefing
+          </button>
+          <button
+            type="button"
+            onClick={onForget}
+            className="h-11 px-6 rounded-full bg-white text-[13px] font-medium text-[#1C1611]"
+          >
+            Forget
+          </button>
         </div>
       </div>
     </div>

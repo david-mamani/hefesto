@@ -38,6 +38,50 @@ Rules:
 - Keep every value in English, short and human-readable.
 - "cluster" defaults to "personal" when ambiguous; family members are "family"; professional contexts are "work".`;
 
+export type Briefing = { title: string; summary: string; keyPoints: string[] };
+
+const BRIEFING_SYSTEM = `You brief the user right before they meet or message someone they know.
+Use ONLY the provided context about that person — never invent facts.
+
+Return ONLY a JSON object:
+{
+  "title": string,          // a short descriptor: role + company, or the relationship (e.g. "Designer at Studio X", "Cousin")
+  "summary": string,        // 1-2 warm sentences: their situation and anything the user promised or owes them
+  "key_points": string[]    // 3-4 short, actionable bullets (e.g. "Ask how Toby is doing", "She's hiring — maybe intro Carlos?")
+}
+
+Keep everything in English, concrete, and grounded in the context. If the context is thin, still return your best short briefing.`;
+
+export async function buildBriefing(name: string, context: string): Promise<Briefing> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not set");
+
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: BRIEFING_SYSTEM },
+        { role: "user", content: `Contact: ${name}\n\nContext:\n${context}` },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Groq briefing failed (${res.status}): ${body.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { choices: { message: { content: string } }[] };
+  const parsed = JSON.parse(data.choices[0]?.message?.content ?? "{}");
+  return {
+    title: typeof parsed.title === "string" ? parsed.title : "",
+    summary: typeof parsed.summary === "string" ? parsed.summary : "",
+    keyPoints: Array.isArray(parsed.key_points) ? parsed.key_points.map(String).slice(0, 4) : [],
+  };
+}
+
 export async function extractCapture(text: string): Promise<ExtractedCapture> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not set");

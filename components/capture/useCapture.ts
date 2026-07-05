@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { ConfirmedFields } from "@/lib/capture";
+import { extractionToFields, type ConfirmedFields } from "@/lib/capture";
 import type { ExtractedCapture } from "@/lib/groq";
 
 export type CaptureCandidate = {
@@ -29,9 +29,14 @@ export function useCapture() {
     kind: "new",
   });
   const sourceText = useRef("");
+  const captureMeta = useRef<{ channel: "text" | "voice"; durationSec: number }>({
+    channel: "text",
+    durationSec: 0,
+  });
 
   const start = useCallback(async (text: string) => {
     sourceText.current = text;
+    captureMeta.current = { channel: "text", durationSec: 0 };
     setState({ phase: "extracting" });
     try {
       const res = await fetch("/api/capture", {
@@ -42,24 +47,35 @@ export function useCapture() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Extraction failed");
 
-      const extraction = data.extraction as ExtractedCapture;
-      setFields({
-        name: extraction.name ?? "",
-        cluster: extraction.cluster,
-        role: extraction.role,
-        company: extraction.company,
-        interests: extraction.interests,
-        metAtEvent: extraction.met_at.event,
-        metAtDate: extraction.met_at.date,
-        relationship: extraction.relationship,
-        facts: extraction.facts,
-        commitments: extraction.commitments,
-      });
+      setFields(extractionToFields(data.extraction as ExtractedCapture));
       setCandidates(data.candidates ?? []);
       setResolution({ kind: "new" });
       setState({ phase: "review" });
     } catch (error) {
       setState({ phase: "error", message: error instanceof Error ? error.message : "Extraction failed" });
+    }
+  }, []);
+
+  const startVoice = useCallback(async (audio: Blob, durationSec: number) => {
+    captureMeta.current = { channel: "voice", durationSec };
+    setState({ phase: "extracting" });
+    try {
+      const form = new FormData();
+      form.append("audio", audio, "capture.webm");
+      const res = await fetch("/api/capture/voice", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Voice capture failed");
+
+      sourceText.current = data.transcript ?? "";
+      setFields(extractionToFields(data.extraction as ExtractedCapture));
+      setCandidates(data.candidates ?? []);
+      setResolution({ kind: "new" });
+      setState({ phase: "review" });
+    } catch (error) {
+      setState({
+        phase: "error",
+        message: error instanceof Error ? error.message : "Voice capture failed",
+      });
     }
   }, []);
 
@@ -117,9 +133,12 @@ export function useCapture() {
     resolution,
     setResolution,
     start,
+    startVoice,
     confirm,
     discard,
     reset: discard,
     sourceText: sourceText.current,
+    channel: captureMeta.current.channel,
+    durationSec: captureMeta.current.durationSec,
   };
 }

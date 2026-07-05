@@ -1,18 +1,32 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { PhotoIcon, MicIcon, ArrowUpIcon } from "@/components/icons";
+
+function fmt(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export function Composer({
   placeholder = "Message Hefesto...",
   onSend,
+  onVoice,
   disabled = false,
 }: {
   placeholder?: string;
   onSend?: (text: string) => void | Promise<void>;
+  onVoice?: (audio: Blob, seconds: number) => void | Promise<void>;
   disabled?: boolean;
 }) {
   const [text, setText] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef(0);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -20,6 +34,45 @@ export function Composer({
     if (!trimmed || !onSend || disabled) return;
     setText("");
     void onSend(trimmed);
+  }
+
+  function stopTimer() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+    setSeconds(0);
+  }
+
+  async function toggleMic() {
+    if (!onVoice || disabled) return;
+    if (recording) {
+      recorderRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const dur = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        setRecording(false);
+        stopTimer();
+        if (blob.size) void onVoice(blob, dur);
+      };
+      recorderRef.current = rec;
+      startedAtRef.current = Date.now();
+      rec.start();
+      setRecording(true);
+      setSeconds(0);
+      timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    } catch {
+      // Permission denied or unsupported (e.g. some iOS states) — capture by text.
+      alert("I need microphone access for voice notes. You can also just type it.");
+    }
   }
 
   return (
@@ -32,17 +85,39 @@ export function Composer({
         <PhotoIcon />
       </button>
 
-      <div className="flex-1 h-11 rounded-[22px] bg-white/60 border-[1.2px] border-white/90 flex items-center pl-5 pr-3">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
-        />
-        <button type="button" aria-label="Record a voice note" className="text-ink px-1">
-          <MicIcon />
-        </button>
+      <div
+        className={`flex-1 h-11 rounded-[22px] flex items-center pl-5 pr-3 border-[1.2px] ${
+          recording ? "bg-white/80 border-orange" : "bg-white/60 border-white/90"
+        }`}
+      >
+        {recording ? (
+          <div className="flex-1 flex items-center gap-2">
+            <span className="size-[9px] rounded-full bg-orange animate-pulse" />
+            <span className="text-[12.5px] text-ink font-medium">Listening… {fmt(seconds)}</span>
+          </div>
+        ) : (
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+          />
+        )}
+        {onVoice && (
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={recording ? "Stop recording" : "Record a voice note"}
+            className={`px-1 ${recording ? "text-orange" : "text-ink"}`}
+          >
+            {recording ? (
+              <span className="grid place-items-center size-5 rounded-[4px] bg-orange" />
+            ) : (
+              <MicIcon />
+            )}
+          </button>
+        )}
       </div>
 
       <button

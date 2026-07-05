@@ -40,6 +40,13 @@ export default async function HomePage() {
       }
     : PLACEHOLDERS.suggestion;
 
+  // The "next meeting" card is the briefing entry point — feature the most recent
+  // person so tapping it opens their real, memory-grounded briefing.
+  const featured = network.people[0] ?? null;
+  const meeting = featured
+    ? { ...PLACEHOLDERS.meeting, title: `Coffee with ${featured.name}` }
+    : PLACEHOLDERS.meeting;
+
   return (
     <main className="px-6">
       <header className="flex items-center gap-3 pt-12">
@@ -47,7 +54,10 @@ export default async function HomePage() {
         <h1 className="font-semibold text-[26px] text-ink">Hefesto</h1>
       </header>
 
-      <HomeExperience placeholders={{ ...PLACEHOLDERS, suggestion }} />
+      <HomeExperience
+        placeholders={{ ...PLACEHOLDERS, suggestion, meeting }}
+        featuredPersonId={featured?.personId ?? null}
+      />
     </main>
   );
 }

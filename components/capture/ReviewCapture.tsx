@@ -13,6 +13,12 @@ const CLUSTER_LABEL: Record<ConfirmedFields["cluster"], string> = {
 
 const CLUSTER_ORDER: ConfirmedFields["cluster"][] = ["work", "personal", "family"];
 
+function fmtDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function FieldRow({
   label,
   value,
@@ -70,6 +76,8 @@ export function ReviewCapture({
   resolution,
   setResolution,
   sourceText,
+  channel = "text",
+  durationSec = 0,
   onSave,
   onDiscard,
 }: {
@@ -79,6 +87,8 @@ export function ReviewCapture({
   resolution: { kind: "new" } | { kind: "existing"; personId: string };
   setResolution: (r: { kind: "new" } | { kind: "existing"; personId: string }) => void;
   sourceText: string;
+  channel?: "text" | "voice";
+  durationSec?: number;
   onSave: () => void;
   onDiscard: () => void;
 }) {
@@ -104,7 +114,13 @@ export function ReviewCapture({
         <h1 className="font-semibold text-[24px] text-ink mt-3">Review capture</h1>
 
         <div className="glass rounded-3xl h-12 mt-5 flex items-center px-4 gap-3 overflow-hidden">
-          <span className="micro-label text-[9.5px] tracking-[0.95px] shrink-0">Text</span>
+          <span
+            className={`micro-label text-[9.5px] tracking-[0.95px] shrink-0 ${
+              channel === "voice" ? "text-orange" : ""
+            }`}
+          >
+            {channel === "voice" ? `Voice · ${fmtDuration(durationSec)}` : "Text"}
+          </span>
           <p className="text-[12px] text-muted truncate">&quot;{sourceText}&quot;</p>
         </div>
 

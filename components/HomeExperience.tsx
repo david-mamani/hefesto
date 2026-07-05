@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { EmberGlow } from "@/components/EmberGlow";
 import { HefestoSprite } from "@/components/HefestoSprite";
 import { SpeechBubble } from "@/components/SpeechBubble";
 import { Composer } from "@/components/Composer";
+import { Briefing } from "@/components/Briefing";
 import { ChevronRightIcon } from "@/components/icons";
 import { useCapture } from "@/components/capture/useCapture";
 import { ReviewCapture } from "@/components/capture/ReviewCapture";
@@ -15,9 +17,16 @@ export type HomePlaceholders = {
   suggestion: { text: string; cluster: string };
 };
 
-export function HomeExperience({ placeholders }: { placeholders: HomePlaceholders }) {
+export function HomeExperience({
+  placeholders,
+  featuredPersonId,
+}: {
+  placeholders: HomePlaceholders;
+  featuredPersonId?: string | null;
+}) {
   const capture = useCapture();
   const { state } = capture;
+  const [briefingOpen, setBriefingOpen] = useState(false);
 
   const forging = state.phase === "forging" || state.phase === "done";
   const bubbleText =
@@ -65,6 +74,7 @@ export function HomeExperience({ placeholders }: { placeholders: HomePlaceholder
             <button
               type="button"
               aria-label="Open briefing"
+              onClick={() => featuredPersonId && setBriefingOpen(true)}
               className="absolute right-[14px] bottom-[16px] size-10 rounded-full bg-ember grid place-items-center"
             >
               <ChevronRightIcon color="#F6F1E8" />
@@ -106,6 +116,7 @@ export function HomeExperience({ placeholders }: { placeholders: HomePlaceholder
       <div className="mt-[26px]">
         <Composer
           onSend={(text) => capture.start(text)}
+          onVoice={(audio, seconds) => capture.startVoice(audio, seconds)}
           disabled={state.phase === "extracting" || state.phase === "forging"}
         />
       </div>
@@ -118,6 +129,8 @@ export function HomeExperience({ placeholders }: { placeholders: HomePlaceholder
           resolution={capture.resolution}
           setResolution={capture.setResolution}
           sourceText={capture.sourceText}
+          channel={capture.channel}
+          durationSec={capture.durationSec}
           onSave={capture.confirm}
           onDiscard={capture.discard}
         />

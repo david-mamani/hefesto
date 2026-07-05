@@ -13,6 +13,7 @@ export type NetworkPerson = {
   cluster: "work" | "personal" | "family" | null;
   lastInteraction: string | null;
   warmth: Warmth;
+  memoryCount: number;
 };
 
 export type Network = {
@@ -29,6 +30,20 @@ export async function getNetwork(userId: string): Promise<Network> {
     .order("last_interaction", { ascending: false, nullsFirst: false });
 
   const rows = data ?? [];
+
+  // Memory count per person (drives the M13 "N memories" line).
+  const counts = new Map<string, number>();
+  if (rows.length) {
+    const { data: pd } = await admin
+      .from("person_data")
+      .select("person_id")
+      .in(
+        "person_id",
+        rows.map((r) => r.person_id)
+      );
+    for (const r of pd ?? []) counts.set(r.person_id, (counts.get(r.person_id) ?? 0) + 1);
+  }
+
   const people: NetworkPerson[] = rows.map((p) => ({
     personId: p.person_id,
     name: p.canonical_name,
@@ -36,6 +51,7 @@ export async function getNetwork(userId: string): Promise<Network> {
     cluster: p.cluster,
     lastInteraction: p.last_interaction,
     warmth: warmthOf(p.last_interaction),
+    memoryCount: counts.get(p.person_id) ?? 0,
   }));
 
   const nudge = selectNudge(
