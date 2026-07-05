@@ -3,8 +3,8 @@ import { EmberGlow } from "@/components/EmberGlow";
 import { WarmthChart } from "@/components/WarmthChart";
 import { NetworkWidget } from "@/components/NetworkWidget";
 import { RingAvatar } from "@/components/RingAvatar";
-import { ChevronRightIcon, MicIcon, ArrowUpIcon } from "@/components/icons";
-import { SearchIcon } from "@/components/icons-desktop";
+import { AskBar } from "@/components/AskBar";
+import { ChevronRightIcon } from "@/components/icons";
 
 // Placeholder content matching the dashboard frame — replaced by live data
 // (person registry, briefings, warmth) as capture and the graph come online.
@@ -52,23 +52,7 @@ export default async function DesktopHomePage() {
       </h1>
       <p className="text-[13px] text-muted mt-1">{PLACEHOLDER.summary}</p>
 
-      <div className="glass rounded-[27px] h-[54px] max-w-[700px] mt-9 flex items-center pl-5 pr-2 gap-3">
-        <SearchIcon color="var(--ink)" />
-        <input
-          placeholder="Ask Hefesto…"
-          className="flex-1 min-w-0 bg-transparent text-[13.5px] text-ink placeholder:text-muted focus:outline-none"
-        />
-        <button type="button" aria-label="Record a voice note" className="text-ink px-1">
-          <MicIcon />
-        </button>
-        <button
-          type="button"
-          aria-label="Send"
-          className="size-10 rounded-full bg-ember grid place-items-center"
-        >
-          <ArrowUpIcon color="#F6F1E8" />
-        </button>
-      </div>
+      <AskBar />
 
       <div className="grid grid-cols-[330px_330px_minmax(360px,420px)] gap-5 mt-[26px] max-[1280px]:grid-cols-2 max-[1280px]:max-w-[680px]">
         <section className="relative overflow-hidden h-[150px] rounded-[26px] bg-gradient-to-b from-peach to-orange shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] p-6 text-white">

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { RingAvatar } from "@/components/RingAvatar";
 import { HefestoSprite } from "@/components/HefestoSprite";
-import { Composer } from "@/components/Composer";
+import { ChatView } from "@/components/chat/ChatView";
 
 export default async function ChatPage() {
   const supabase = await createClient();
@@ -21,13 +21,7 @@ export default async function ChatPage() {
         <HefestoSprite scale={2} className="ml-auto -mt-3" />
       </header>
 
-      <div className="flex-1 flex flex-col gap-4 pt-7">
-        {/* Conversation renders here once recall is wired to the memory backend */}
-      </div>
-
-      <div className="pb-2">
-        <Composer />
-      </div>
+      <ChatView />
     </main>
   );
 }

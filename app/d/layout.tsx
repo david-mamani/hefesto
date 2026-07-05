@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { DesktopShell } from "@/components/DesktopShell";
 
 export default async function DesktopLayout({
   children,
@@ -16,9 +16,8 @@ export default async function DesktopLayout({
   const secondary = user?.email ?? "";
 
   return (
-    <div className="max-w-[1440px] mx-auto flex gap-9 px-6 py-6 min-h-dvh">
-      <DesktopSidebar name={name} secondary={secondary} />
-      <main className="flex-1 min-w-0">{children}</main>
-    </div>
+    <DesktopShell name={name} secondary={secondary}>
+      {children}
+    </DesktopShell>
   );
 }

@@ -17,9 +17,11 @@ const NAV = [
 export function DesktopSidebar({
   name,
   secondary,
+  onCapture,
 }: {
   name: string;
   secondary: string;
+  onCapture?: () => void;
 }) {
   const pathname = usePathname();
   const clean = pathname.replace(/^\/(m|d)(?=\/|$)/, "") || "/";
@@ -55,6 +57,7 @@ export function DesktopSidebar({
 
       <button
         type="button"
+        onClick={onCapture}
         className="mt-auto mx-3 h-11 rounded-[22px] bg-ember text-cream text-[13px] font-medium flex items-center justify-center gap-2"
       >
         <PlusIcon color="#F6F1E8" />

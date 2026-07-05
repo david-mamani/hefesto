@@ -1,0 +1,204 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Composer } from "@/components/Composer";
+import { ChatMessageBubble, TypingIndicator, type ChatMessage } from "@/components/ChatMessages";
+import type { ChatEvidence, ChatPathPerson } from "@/app/api/chat/route";
+
+export type ChatResponse = {
+  conversationId: string;
+  sessionId: string;
+  text: string;
+  evidence: ChatEvidence[];
+  path: ChatPathPerson[];
+  qaId: string | null;
+  mode: "networking" | "personal" | "family";
+  pending?: boolean;
+};
+
+type Message = ChatMessage & {
+  evidence?: ChatEvidence[];
+  path?: ChatPathPerson[];
+  qaId?: string | null;
+  sessionId?: string;
+  feedback?: "up" | "down";
+};
+
+function viaLabel(message: Message): string | null {
+  if (message.path?.length) return message.path.map((p) => p.name).join(" · ");
+  if (message.evidence?.length)
+    return [...new Set(message.evidence.map((e) => e.document))].join(" · ");
+  return null;
+}
+
+function ThumbIcon({ down = false, active = false }: { down?: boolean; active?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden="true"
+      style={down ? { transform: "rotate(180deg)" } : undefined}
+    >
+      <path
+        d="M4 6.5V12M4 6.5L6.5 1.8C7.4 1.8 8.3 2.5 8.3 3.6V5H11.2C12.1 5 12.7 5.8 12.5 6.6L11.6 10.9C11.5 11.5 10.9 12 10.3 12H4M4 6.5H1.5V12H4"
+        stroke={active ? "var(--orange)" : "#1C1611"}
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={active ? 1 : 0.65}
+      />
+    </svg>
+  );
+}
+
+export function ChatView({
+  initialQuestion,
+  onResponse,
+}: {
+  initialQuestion?: string;
+  onResponse?: (response: ChatResponse) => void;
+}) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sending, setSending] = useState(false);
+  const [thinkDeeper, setThinkDeeper] = useState(false);
+  const conversationRef = useRef<string | null>(null);
+  const autoSent = useRef(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const send = useCallback(
+    async (text: string) => {
+      const userMessage: Message = { id: crypto.randomUUID(), role: "user", text };
+      setMessages((prev) => [...prev, userMessage]);
+      setSending(true);
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            conversationId: conversationRef.current ?? undefined,
+            thinkDeeper,
+          }),
+        });
+        const data = (await res.json()) as ChatResponse & { error?: string };
+        if (!res.ok) throw new Error(data.error ?? "Recall failed");
+
+        conversationRef.current = data.conversationId;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "hefesto",
+            text: data.text,
+            evidence: data.evidence,
+            path: data.path,
+            qaId: data.qaId,
+            sessionId: data.sessionId,
+          },
+        ]);
+        onResponse?.(data);
+      } catch (error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "hefesto",
+            text:
+              error instanceof Error && error.message
+                ? error.message
+                : "Something went sideways — try again.",
+          },
+        ]);
+      } finally {
+        setSending(false);
+      }
+    },
+    [onResponse, thinkDeeper]
+  );
+
+  useEffect(() => {
+    if (initialQuestion && !autoSent.current) {
+      autoSent.current = true;
+      void send(initialQuestion);
+    }
+  }, [initialQuestion, send]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, sending]);
+
+  async function giveFeedback(message: Message, thumbs: "up" | "down") {
+    if (!message.qaId || !message.sessionId || message.feedback) return;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === message.id ? { ...m, feedback: thumbs } : m))
+    );
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qaId: message.qaId, sessionId: message.sessionId, thumbs }),
+    }).catch(() => {});
+  }
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col gap-4 pt-7 overflow-y-auto">
+        {messages.map((message) => (
+          <div key={message.id}>
+            <ChatMessageBubble message={message} />
+            {message.role === "hefesto" && viaLabel(message) && (
+              <div className="flex items-center gap-3 mt-2 ml-1">
+                <p className="text-[10.5px] text-muted">via: {viaLabel(message)}</p>
+                {message.qaId && (
+                  <span className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Helpful"
+                      onClick={() => giveFeedback(message, "up")}
+                      className="size-7 rounded-full bg-white/70 border border-white/90 grid place-items-center"
+                    >
+                      <ThumbIcon active={message.feedback === "up"} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Not helpful"
+                      onClick={() => giveFeedback(message, "down")}
+                      className="size-7 rounded-full bg-white/70 border border-white/90 grid place-items-center"
+                    >
+                      <ThumbIcon down active={message.feedback === "down"} />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        {sending && (
+          <div className="mt-1">
+            <TypingIndicator />
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="flex items-center justify-end pb-2">
+        <button
+          type="button"
+          onClick={() => setThinkDeeper((v) => !v)}
+          className={`h-[26px] px-4 rounded-full text-[10px] font-medium tracking-[0.5px] mb-2 ${
+            thinkDeeper
+              ? "bg-ember text-cream"
+              : "bg-white/55 border border-white/90 text-muted"
+          }`}
+        >
+          Think deeper
+        </button>
+      </div>
+      <div className="pb-2">
+        <Composer onSend={send} disabled={sending} />
+      </div>
+    </div>
+  );
+}

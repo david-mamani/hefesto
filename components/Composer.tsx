@@ -6,16 +6,18 @@ import { PhotoIcon, MicIcon, ArrowUpIcon } from "@/components/icons";
 export function Composer({
   placeholder = "Message Hefesto...",
   onSend,
+  disabled = false,
 }: {
   placeholder?: string;
   onSend?: (text: string) => void | Promise<void>;
+  disabled?: boolean;
 }) {
   const [text, setText] = useState("");
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || !onSend) return;
+    if (!trimmed || !onSend || disabled) return;
     setText("");
     void onSend(trimmed);
   }
@@ -35,7 +37,8 @@ export function Composer({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder:text-muted focus:outline-none"
+          disabled={disabled}
+          className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
         />
         <button type="button" aria-label="Record a voice note" className="text-ink px-1">
           <MicIcon />
