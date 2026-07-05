@@ -7,7 +7,7 @@ import { HomeIcon, ChatIcon, GraphIcon, PeopleIcon } from "@/components/icons";
 const ITEMS = [
   { label: "Home", href: "/", Icon: HomeIcon, enabled: true },
   { label: "Chat", href: "/chat", Icon: ChatIcon, enabled: true },
-  { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: false },
+  { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: true },
   { label: "People", href: "/people", Icon: PeopleIcon, enabled: false },
 ] as const;
 

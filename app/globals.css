@@ -108,3 +108,34 @@ body {
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* Graph "bloom": embers scale + fade in, spokes draw after, sheet slides up. */
+@keyframes ember-bloom {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes spoke-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+/* Class-based (not inline shorthand) so SSR/CSR hydration stays byte-stable;
+   per-node stagger comes from the --d custom property. */
+.graph-ember {
+  opacity: 0;
+  animation: ember-bloom 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) forwards;
+}
+.graph-spoke {
+  opacity: 0;
+  animation: spoke-in 0.5s ease-out var(--d, 0s) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .graph-ember,
+  .graph-spoke {
+    animation: none;
+    opacity: 1;
+  }
+}
