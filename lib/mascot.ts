@@ -54,6 +54,13 @@ export const MODE_COLORS: Record<Mode, string> = {
   family: "#3fb57f",
 };
 
+/** A person's cluster decides Hefesto's mode (PRD §11). */
+export function clusterToMode(cluster: string | null | undefined): Mode {
+  if (cluster === "work") return "networking";
+  if (cluster === "family") return "family";
+  return "personal";
+}
+
 /**
  * Tint the UI for a mode by pointing the `--mode` CSS variable at that mode's
  * token. Cards/accents that read `var(--color-mode)` follow; the sprite does not.

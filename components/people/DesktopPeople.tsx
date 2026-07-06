@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { NetworkPerson, PersonDetail } from "@/lib/network";
@@ -16,6 +16,7 @@ import { Briefing } from "@/components/Briefing";
 import { ForgetModal } from "@/components/ForgetModal";
 import { ChevronRightIcon } from "@/components/icons";
 import { SearchIcon } from "@/components/icons-desktop";
+import { applyMode, clusterToMode } from "@/lib/mascot";
 
 /*
  * Desktop People (Figma M10b): master list with search + cluster pills on the
@@ -52,6 +53,12 @@ export function DesktopPeople({
   const [forgetOpen, setForgetOpen] = useState(false);
   const [forgetBusy, setForgetBusy] = useState(false);
   const [draftHint, setDraftHint] = useState(false);
+
+  // The selected person's cluster tints the panel accents (PRD §11).
+  useEffect(() => {
+    applyMode(clusterToMode(detail?.person.cluster));
+    return () => applyMode("personal");
+  }, [detail?.person.cluster]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -191,7 +198,13 @@ export function DesktopPeople({
               </span>
             </div>
 
-            <section className="relative overflow-hidden h-[90px] rounded-[22px] bg-gradient-to-b from-peach to-orange shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] mt-[26px] px-5">
+            <section
+              className="relative overflow-hidden h-[90px] rounded-[22px] shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] mt-[26px] px-5"
+              style={{
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-mode) 46%, white) 0%, var(--color-mode) 100%)",
+              }}
+            >
               <p className="text-[10px] font-medium tracking-[1px] text-white pt-[14px]">
                 AFFINITY
               </p>
@@ -213,7 +226,7 @@ export function DesktopPeople({
             <ul className="mt-[12px] flex flex-col gap-[13px]">
               {knowledgeLines(person).map((line) => (
                 <li key={line} className="flex items-start gap-[11px]">
-                  <span className="size-[7px] rounded-full bg-orange mt-[5px] shrink-0" />
+                  <span className="size-[7px] rounded-full mt-[5px] shrink-0" style={{ background: "var(--color-mode)" }} />
                   <span className="text-[13px] text-ink leading-snug">{line}</span>
                 </li>
               ))}
@@ -233,7 +246,7 @@ export function DesktopPeople({
               )}
               {timeline.map((entry, index) => (
                 <li key={`${entry.date}-${index}`} className="flex items-baseline gap-[12px]">
-                  <span className="size-[8px] rounded-full bg-orange shrink-0 self-center" />
+                  <span className="size-[8px] rounded-full shrink-0 self-center" style={{ background: "var(--color-mode)" }} />
                   <span className="micro-label text-[9px] tracking-[0.9px] w-[52px] shrink-0">
                     {timelineDate(entry.date)}
                   </span>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PersonDetail } from "@/lib/network";
 import { knowledgeLines, personTitle, affinityCaption } from "@/lib/person";
+import { applyMode, clusterToMode } from "@/lib/mascot";
 import { RingAvatar } from "@/components/RingAvatar";
 import { Briefing } from "@/components/Briefing";
 import { ForgetModal } from "@/components/ForgetModal";
@@ -31,6 +32,13 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
 
   const knowledge = knowledgeLines(person);
   const recentTimeline = timeline.slice(-4);
+
+  // Opening a person adopts their cluster's mode: the affinity glow and the
+  // accents tint blue / orange / green (PRD §11). Default returns on close.
+  useEffect(() => {
+    applyMode(clusterToMode(person.cluster));
+    return () => applyMode("personal");
+  }, [person.cluster]);
 
   function stubDraft() {
     setDraftHint(true);
@@ -80,7 +88,13 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
         </div>
       </div>
 
-      <section className="relative overflow-hidden h-[96px] rounded-[24px] bg-gradient-to-b from-peach to-orange shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] mt-[22px] px-5">
+      <section
+        className="relative overflow-hidden h-[96px] rounded-[24px] shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] mt-[22px] px-5"
+        style={{
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--color-mode) 46%, white) 0%, var(--color-mode) 100%)",
+        }}
+      >
         <p className="text-[10px] font-medium tracking-[1px] text-white pt-[14px]">AFFINITY</p>
         <div className="flex items-center gap-4">
           <p className="font-light text-[40px] text-white leading-tight">{person.warmth.score}</p>
@@ -104,7 +118,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
         <ul className="flex flex-col gap-[13px]">
           {knowledge.map((line) => (
             <li key={line} className="flex items-start gap-[13px]">
-              <span className="size-[7px] rounded-full bg-orange mt-[5px] shrink-0" />
+              <span className="size-[7px] rounded-full mt-[5px] shrink-0" style={{ background: "var(--color-mode)" }} />
               <span className="text-[13px] text-ink leading-snug">{line}</span>
             </li>
           ))}
@@ -122,7 +136,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
               {index < recentTimeline.length - 1 && (
                 <span className="absolute left-[4px] top-[14px] bottom-0 w-[1.5px] bg-ink/15" />
               )}
-              <span className="absolute left-0 top-[4px] size-[9px] rounded-full bg-orange" />
+              <span className="absolute left-0 top-[4px] size-[9px] rounded-full" style={{ background: "var(--color-mode)" }} />
               <p className="micro-label text-[9px] tracking-[0.9px]">{timelineDate(entry.date)}</p>
               <p className="text-[12.5px] text-ink leading-snug mt-[2px]">{entry.text}</p>
             </li>
