@@ -1,159 +1,336 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  BASE_CLIP,
+  CLIP_FILES,
+  SUSTAINED,
+  applyMode,
+  loadClip,
+  loadManifest,
+  type ClipName,
+  type Mode,
+  type RawClip,
+} from "@/lib/mascot";
 
 /*
- * Hefesto — the 8-bit mascot engine.
+ * Hefesto — the 8-bit mascot engine (PRD §21-§22).
  *
- * Pixel-art rules (PRD §21): integer scaling only, imageSmoothingEnabled=false,
- * the whole sprite redrawn each frame. Plays a clip JSON when one exists; until
- * the hand-drawn idle.json lands it falls back to the static sprite with a gentle
- * procedural "breath" so the cat is alive, not frozen. Pauses off-viewport
- * (IntersectionObserver) and with prefers-reduced-motion.
- *
- * Clip contract: { w, h, palette:[null,"#..",..], frames?:number[][],
- *                  sequence?:[{frame,ms}], loop?, indices?:number[] (static) }
+ * A canvas + rAF game loop with a delta-time accumulator. Integer scaling only,
+ * imageSmoothingEnabled=false, the whole sprite redrawn each frame. A small state
+ * machine plays a looping base (idle), sustained loops (typing), and one-shots
+ * that return to idle; play() while busy queues. The imperative handle exposes
+ * play / setMode / stop / on. setMode tints the UI via CSS — never the cat.
+ * Pauses off-viewport (IntersectionObserver) and with prefers-reduced-motion.
  */
 
-type Clip = {
+export type HefestoHandle = {
+  play: (name: ClipName, opts?: { queue?: boolean }) => void;
+  setMode: (mode: Mode) => void;
+  stop: () => void;
+  currentFrame: () => number;
+  loadedClips: () => string[];
+  on: (event: "click" | "hover", cb: () => void) => () => void;
+};
+
+type Frame = { frame: number; ms: number; off: number };
+type NormClip = {
+  name: string;
   w: number;
   h: number;
   palette: (string | null)[];
-  indices?: number[];
-  frames?: number[][];
-  sequence?: { frame: number; ms: number }[];
-  loop?: boolean;
+  frames: number[][];
+  seq: Frame[];
+  loop: boolean;
 };
 
-// Procedural idle for a single-frame sprite: a slow 1px settle reads as breathing.
-const BREATH = [
-  { frame: 0, ms: 1000, off: 0 },
+// Static idle → a slow uneven 1px settle reads as breathing until a hand-drawn
+// idle clip lands.
+const BREATH: Frame[] = [
+  { frame: 0, ms: 1100, off: 0 },
   { frame: 0, ms: 560, off: 1 },
 ];
 
-async function loadClip(src?: string): Promise<Clip | null> {
-  const candidates = src ? [src] : ["/mascot/idle.json", "/mascot/hefesto-static.json"];
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return (await res.json()) as Clip;
-    } catch {
-      // try next candidate
-    }
+function normalize(name: string, clip: RawClip): NormClip | null {
+  const frames = clip.frames?.length ? clip.frames : clip.indices ? [clip.indices] : [];
+  if (!frames.length) return null;
+  const loop = clip.loop ?? SUSTAINED.includes(name as ClipName);
+
+  let seq: Frame[];
+  if (clip.sequence?.length && frames.length > 1) {
+    seq = clip.sequence.map((s) => ({ frame: s.frame, ms: s.ms, off: 0 }));
+  } else if (name === BASE_CLIP) {
+    seq = BREATH;
+  } else {
+    seq = [{ frame: 0, ms: 400, off: 0 }];
   }
-  return null;
+  return { name, w: clip.w, h: clip.h, palette: clip.palette, frames, seq, loop };
 }
 
-export function HefestoSprite({
-  scale = 6,
-  src,
-  className,
-}: {
-  scale?: number;
-  src?: string;
-  className?: string;
-}) {
+class MascotEngine {
+  private ctx: CanvasRenderingContext2D;
+  private cell: number;
+  private clips = new Map<string, NormClip>();
+  private active: NormClip | null = null;
+  private queue: string[] = [];
+  private step = 0;
+  private acc = 0;
+  private last = 0;
+  private raf = 0;
+  private visible = true;
+  private running = false;
+  private sized = false;
+  readonly reduced: boolean;
+
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private scale: number,
+    dpr: number,
+    reduced: boolean
+  ) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("2d context unavailable");
+    this.ctx = ctx;
+    this.ctx.imageSmoothingEnabled = false;
+    this.cell = scale * dpr;
+    this.reduced = reduced;
+  }
+
+  add(clip: NormClip) {
+    this.clips.set(clip.name, clip);
+    // The base pose defines the canvas size and the first painted frame.
+    if (clip.name === BASE_CLIP && !this.sized) {
+      this.resizeTo(clip);
+      this.active = clip;
+      this.draw();
+    } else if (!this.active && !this.sized) {
+      // No base yet — show whatever arrived first so it's never blank.
+      this.resizeTo(clip);
+      this.active = clip;
+      this.draw();
+    }
+  }
+
+  private resizeTo(clip: NormClip) {
+    this.canvas.width = clip.w * this.cell;
+    this.canvas.height = clip.h * this.cell;
+    this.canvas.style.width = `${clip.w * this.scale}px`;
+    this.canvas.style.height = `${clip.h * this.scale}px`;
+    this.ctx.imageSmoothingEnabled = false;
+    this.sized = true;
+  }
+
+  private base(): NormClip | null {
+    return this.clips.get(BASE_CLIP) ?? this.active;
+  }
+
+  play(name: string, opts?: { queue?: boolean }) {
+    const clip = this.clips.get(name);
+    if (!clip || this.reduced) return;
+    if (this.active && this.active.name === name && clip.loop) return; // already sustained
+    const onBase = !this.active || this.active.name === BASE_CLIP;
+    if (onBase || opts?.queue === false) {
+      this.active = clip;
+      this.step = 0;
+      this.acc = 0;
+    } else {
+      this.queue.push(name);
+    }
+    this.ensureRunning();
+  }
+
+  stop() {
+    this.queue = [];
+    const b = this.base();
+    if (b) {
+      this.active = b;
+      this.step = 0;
+      this.acc = 0;
+    }
+  }
+
+  private advance() {
+    if (!this.active) return;
+    const seq = this.active.seq;
+    if (this.acc < seq[this.step].ms) return;
+    this.acc = 0;
+    this.step++;
+    if (this.step < seq.length) return;
+
+    if (this.active.loop) {
+      this.step = 0;
+    } else if (this.queue.length) {
+      this.active = this.clips.get(this.queue.shift()!) ?? this.base();
+      this.step = 0;
+    } else {
+      this.active = this.base();
+      this.step = 0;
+    }
+  }
+
+  private draw() {
+    if (!this.active) return;
+    const c = this.active;
+    const cur = c.seq[this.step] ?? c.seq[0];
+    const indices = c.frames[cur.frame] ?? c.frames[0];
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const oy = cur.off * this.cell;
+    for (let i = 0; i < indices.length; i++) {
+      const color = c.palette[indices[i]];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect((i % c.w) * this.cell, Math.floor(i / c.w) * this.cell + oy, this.cell, this.cell);
+    }
+  }
+
+  private tick = (now: number) => {
+    if (!this.running || !this.visible) {
+      this.raf = 0;
+      return;
+    }
+    if (this.last === 0) this.last = now;
+    this.acc += now - this.last;
+    this.last = now;
+    this.advance();
+    this.draw();
+    this.raf = requestAnimationFrame(this.tick);
+  };
+
+  private ensureRunning() {
+    if (this.reduced) {
+      this.draw();
+      return;
+    }
+    this.running = true;
+    if (!this.raf && this.visible) {
+      this.last = 0;
+      this.raf = requestAnimationFrame(this.tick);
+    }
+  }
+
+  start() {
+    this.ensureRunning();
+  }
+
+  setVisible(v: boolean) {
+    this.visible = v;
+    if (v) this.ensureRunning();
+    else {
+      cancelAnimationFrame(this.raf);
+      this.raf = 0;
+    }
+  }
+
+  destroy() {
+    cancelAnimationFrame(this.raf);
+    this.running = false;
+  }
+
+  currentFrame() {
+    return this.active ? this.active.seq[this.step]?.frame ?? 0 : 0;
+  }
+
+  loadedNames() {
+    return [...this.clips.keys()];
+  }
+}
+
+export const HefestoSprite = forwardRef<
+  HefestoHandle,
+  {
+    scale?: number;
+    className?: string;
+    mode?: Mode;
+    onReady?: (info: { clips: string[] }) => void;
+  }
+>(function HefestoSprite({ scale = 6, className, mode, onReady }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<MascotEngine | null>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      play: (name, opts) => engineRef.current?.play(name, opts),
+      setMode: (m) => applyMode(m),
+      stop: () => engineRef.current?.stop(),
+      currentFrame: () => engineRef.current?.currentFrame() ?? 0,
+      loadedClips: () => engineRef.current?.loadedNames() ?? [],
+      on: (event, cb) => {
+        const el = canvasRef.current;
+        if (!el) return () => {};
+        const type = event === "hover" ? "mouseenter" : "click";
+        el.addEventListener(type, cb);
+        return () => el.removeEventListener(type, cb);
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     let cancelled = false;
-    let raf = 0;
-    let io: IntersectionObserver | null = null;
+    const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let engine: MascotEngine;
+    try {
+      engine = new MascotEngine(canvas, scale, dpr, reduced);
+    } catch {
+      return;
+    }
+    engineRef.current = engine;
 
     (async () => {
-      const clip = await loadClip(src);
-      const canvas = canvasRef.current;
-      if (cancelled || !clip || !canvas) return;
+      // The manifest declares which clips exist, so we never fire 404s for art
+      // the workshop hasn't drawn yet.
+      const manifest = await loadManifest();
+      if (cancelled) return;
 
-      const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
-      const cell = scale * dpr;
-      canvas.width = clip.w * cell;
-      canvas.height = clip.h * cell;
-      canvas.style.width = `${clip.w * scale}px`;
-      canvas.style.height = `${clip.h * scale}px`;
+      // Base pose: the hand-drawn idle once the workshop ships it (listed in the
+      // manifest), else the static sprite with a procedural breath.
+      const baseRaw =
+        (manifest.includes("idle") && (await loadClip("idle.json"))) ||
+        (await loadClip("hefesto-static.json"));
+      if (cancelled) return;
+      if (baseRaw) {
+        const baseN = normalize("idle", baseRaw);
+        if (baseN) engine.add(baseN);
+      }
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.imageSmoothingEnabled = false;
-
-      const frames =
-        clip.frames && clip.frames.length ? clip.frames : clip.indices ? [clip.indices] : [];
-      if (!frames.length) return;
-
-      const animated = frames.length > 1 && !!clip.sequence?.length;
-      const seq: { frame: number; ms: number; off: number }[] = animated
-        ? clip.sequence!.map((s) => ({ frame: s.frame, ms: s.ms, off: 0 }))
-        : BREATH;
-      const loop = clip.loop ?? true;
-
-      const drawFrame = (indices: number[], yOff: number) => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const oy = yOff * cell;
-        for (let i = 0; i < indices.length; i++) {
-          const color = clip.palette[indices[i]];
-          if (!color) continue;
-          ctx.fillStyle = color;
-          ctx.fillRect((i % clip.w) * cell, Math.floor(i / clip.w) * cell + oy, cell, cell);
-        }
-      };
-
-      // Paint frame 0 immediately so the sprite is never blank — even off-viewport
-      // or before the animation loop starts. The loop only drives the motion.
-      drawFrame(frames[0], 0);
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-      let step = 0;
-      let acc = 0;
-      let last = 0;
-      let visible = true;
-
-      const tick = (now: number) => {
-        if (cancelled || !visible) {
-          raf = 0;
-          return;
-        }
-        if (last === 0) last = now;
-        acc += now - last;
-        last = now;
-
-        const cur = seq[step % seq.length];
-        if (acc >= cur.ms) {
-          acc = 0;
-          if (loop || step < seq.length - 1) step++;
-        }
-        const active = seq[step % seq.length];
-        drawFrame(frames[active.frame] ?? frames[0], active.off);
-        raf = requestAnimationFrame(tick);
-      };
-
-      const start = () => {
-        if (!raf) {
-          last = 0;
-          raf = requestAnimationFrame(tick);
-        }
-      };
-
-      io = new IntersectionObserver(
-        ([entry]) => {
-          visible = entry.isIntersecting;
-          if (visible) start();
-          else {
-            cancelAnimationFrame(raf);
-            raf = 0;
-          }
-        },
-        { threshold: 0 }
-      );
-      io.observe(canvas);
-      start();
+      // One-shots + sustained clips the workshop has exported.
+      for (const name of manifest) {
+        if (name === "idle") continue;
+        const rc = await loadClip(CLIP_FILES[name]);
+        if (cancelled || !rc) continue;
+        const n = normalize(name, rc);
+        if (n) engine.add(n);
+      }
+      if (cancelled) return;
+      engine.start();
+      onReadyRef.current?.({ clips: engine.loadedNames() });
     })();
+
+    const io = new IntersectionObserver(([entry]) => engine.setVisible(entry.isIntersecting), {
+      threshold: 0,
+    });
+    io.observe(canvas);
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
-      io?.disconnect();
+      io.disconnect();
+      engine.destroy();
+      engineRef.current = null;
     };
-  }, [scale, src]);
+  }, [scale]);
+
+  useEffect(() => {
+    if (mode) applyMode(mode);
+  }, [mode]);
 
   return (
     <canvas
@@ -163,7 +340,7 @@ export function HefestoSprite({
       aria-hidden="true"
     />
   );
-}
+});
 
 // The engine is the mascot — <Hefesto/> reads better at call sites (Home, Chat, /dev).
 export const Hefesto = HefestoSprite;
