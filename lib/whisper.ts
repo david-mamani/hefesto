@@ -5,7 +5,7 @@
  */
 
 const GROQ_TRANSCRIBE_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
-const MODEL = "whisper-large-v3";
+const MODEL = "whisper-large-v3-turbo";
 
 export async function transcribeAudio(audio: Blob, filename = "capture.webm"): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
