@@ -12,6 +12,7 @@ import { ChevronRightIcon } from "@/components/icons";
 import type { NetworkPerson } from "@/lib/network";
 import type { Nudge } from "@/lib/warmth";
 import { knowledgeLines } from "@/lib/person";
+import { nudgesEnabled } from "@/lib/theme";
 
 /*
  * Desktop Home (Figma M10) — the dashboard, fed by the live person registry:
@@ -54,6 +55,7 @@ export function DesktopHome({
   // On open, push the cold-contact nudge to the user's linked Telegram
   // (server-side: max one proactive push per day).
   useEffect(() => {
+    if (!nudgesEnabled()) return;
     fetch("/api/nudge", { method: "POST" }).catch(() => {});
   }, []);
 

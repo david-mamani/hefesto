@@ -10,6 +10,7 @@ import { Briefing } from "@/components/Briefing";
 import { ChevronRightIcon } from "@/components/icons";
 import { useCapture } from "@/components/capture/useCapture";
 import { ReviewCapture } from "@/components/capture/ReviewCapture";
+import { nudgesEnabled } from "@/lib/theme";
 import { ForgingCard } from "@/components/capture/ForgingCard";
 import type { ChatResponse } from "@/components/chat/ChatView";
 
@@ -76,8 +77,9 @@ export function HomeExperience({
   }, [briefingOpen]);
 
   // On open, push the cold-contact nudge to the user's linked Telegram (throttled
-  // server-side). The Home card itself is already rendered from server data.
+  // server-side) — unless the user turned proactive nudges off in Account.
   useEffect(() => {
+    if (!nudgesEnabled()) return;
     fetch("/api/nudge", { method: "POST" }).catch(() => {});
   }, []);
 

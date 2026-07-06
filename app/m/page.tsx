@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RingAvatar } from "@/components/RingAvatar";
 import { HomeExperience } from "@/components/HomeExperience";
@@ -60,7 +61,9 @@ export default async function HomePage() {
   return (
     <main className="px-6">
       <header className="flex items-center gap-3 pt-12">
-        <RingAvatar initial={initial} />
+        <Link href="/account" aria-label="Account">
+          <RingAvatar initial={initial} />
+        </Link>
         <h1 className="font-semibold text-[26px] text-ink">Hefesto</h1>
       </header>
 

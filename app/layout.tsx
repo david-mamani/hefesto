@@ -30,7 +30,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : undefined;
+  const pref = cookieStore.get("theme")?.value;
+  const theme = pref === "dark" ? "dark" : undefined;
 
   return (
     <html
@@ -38,7 +39,18 @@ export default async function RootLayout({
       className={`${poppins.variable} h-full antialiased`}
       data-theme={theme}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {pref === "system" && (
+          // System preference resolves on the client before first paint.
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                'if(window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.dataset.theme="dark"',
+            }}
+          />
+        )}
+        {children}
+      </body>
     </html>
   );
 }

@@ -11,7 +11,7 @@ const NAV = [
   { label: "People", href: "/people", Icon: PeopleIcon, enabled: true },
   { label: "Graph", href: "/graph", Icon: GraphIcon, enabled: true },
   { label: "Chat", href: "/chat", Icon: ChatIcon, enabled: true },
-  { label: "Settings", href: "/settings", Icon: SettingsIcon, enabled: false },
+  { label: "Settings", href: "/settings", Icon: SettingsIcon, enabled: true },
 ] as const;
 
 export function DesktopSidebar({
@@ -64,13 +64,13 @@ export function DesktopSidebar({
         Capture
       </button>
 
-      <div className="flex items-center gap-3 px-3 mt-9">
+      <Link href="/settings" className="flex items-center gap-3 px-3 mt-9">
         <RingAvatar initial={(name[0] ?? "H").toUpperCase()} />
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-ink truncate">{name}</p>
           <p className="text-[10.5px] text-muted truncate">{secondary}</p>
         </div>
-      </div>
+      </Link>
     </aside>
   );
 }
