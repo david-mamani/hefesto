@@ -60,8 +60,20 @@ export function useCapture() {
     captureMeta.current = { channel: "voice", durationSec };
     setState({ phase: "extracting" });
     try {
+      // Name the part by the recorder's real mime so Whisper reads the right
+      // container — iOS Safari records audio/mp4, not webm.
+      const type = audio.type;
+      const ext = type.includes("mp4") || type.includes("m4a")
+        ? "mp4"
+        : type.includes("ogg")
+          ? "ogg"
+          : type.includes("wav")
+            ? "wav"
+            : type.includes("mpeg") || type.includes("mp3")
+              ? "mp3"
+              : "webm";
       const form = new FormData();
-      form.append("audio", audio, "capture.webm");
+      form.append("audio", audio, `capture.${ext}`);
       const res = await fetch("/api/capture/voice", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Voice capture failed");

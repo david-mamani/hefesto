@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ConfirmedFields } from "@/lib/capture";
 import type { CaptureCandidate } from "@/components/capture/useCapture";
-import { ChevronRightIcon } from "@/components/icons";
+import { ChevronRightIcon, MicIcon } from "@/components/icons";
 
 const CLUSTER_LABEL: Record<ConfirmedFields["cluster"], string> = {
   work: "Networking",
@@ -113,12 +113,11 @@ export function ReviewCapture({
 
         <h1 className="font-semibold text-[24px] text-ink mt-3">Review capture</h1>
 
-        <div className="glass rounded-3xl h-12 mt-5 flex items-center px-4 gap-3 overflow-hidden">
-          <span
-            className={`micro-label text-[9.5px] tracking-[0.95px] shrink-0 ${
-              channel === "voice" ? "text-orange" : ""
-            }`}
-          >
+        <div className="glass rounded-3xl h-12 mt-5 flex items-center px-4 gap-2.5 overflow-hidden">
+          {channel === "voice" && (
+            <MicIcon color="#1c1611" className="w-[11px] h-[14px] shrink-0" />
+          )}
+          <span className="micro-label text-[9.5px] tracking-[0.95px] shrink-0">
             {channel === "voice" ? `Voice · ${fmtDuration(durationSec)}` : "Text"}
           </span>
           <p className="text-[12px] text-muted truncate">&quot;{sourceText}&quot;</p>
