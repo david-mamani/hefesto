@@ -8,6 +8,10 @@ export type Mode = "networking" | "personal" | "family";
 
 // A clip file as exported from David's pixel tool.
 // `indices` = a single static frame; `frames` + `sequence` = an animation.
+// `anchor` pins a one-shot to an idle frame: the engine waits until idle rests
+// on that frame before playing, and returns to it after — no pose jump.
+// `variants` gives a one-shot several alternative sequences over the same
+// frames; the engine picks one at random per play, so repeats feel natural.
 export type RawClip = {
   w: number;
   h: number;
@@ -16,26 +20,32 @@ export type RawClip = {
   frames?: number[][];
   sequence?: { frame: number; ms: number }[];
   loop?: boolean;
+  anchor?: number;
+  variants?: { frame: number; ms: number }[][];
 };
 
 // Every clip the engine knows how to play, mapped to its file in public/mascot/.
 // Files arrive during the workshop; the engine loads whichever exist and skips
 // the rest, so new clips are drop-in.
+// wave/happy were cut by art direction — gestures stay minimal: ambient life
+// (blink/tail/doubt), work states (typing/listening) and the alert "!".
 export const CLIP_FILES = {
   idle: "idle.json",
   blink: "blink.json",
+  tail: "tail.json",
+  doubt: "doubt.json",
   typing: "typing.json",
-  wave: "wave.json",
-  happy: "happy.json",
+  listening: "listening.json",
   alert: "alert.json",
 } as const;
 
 export type ClipName = keyof typeof CLIP_FILES;
 
 // The looping base pose. Everything else is either sustained (loops until
-// stopped — e.g. typing while Hefesto thinks) or a one-shot that returns to idle.
+// stopped — typing while Hefesto writes, listening while a voice note records)
+// or a one-shot that returns to idle.
 export const BASE_CLIP: ClipName = "idle";
-export const SUSTAINED: ClipName[] = ["idle", "typing"];
+export const SUSTAINED: ClipName[] = ["idle", "typing", "listening"];
 
 // Mode colors (PRD §11) — tint the UI's glow/accents, NEVER the cat's palette.
 export const MODE_COLORS: Record<Mode, string> = {

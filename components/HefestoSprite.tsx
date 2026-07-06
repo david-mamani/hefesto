@@ -29,6 +29,7 @@ export type HefestoHandle = {
   setMode: (mode: Mode) => void;
   stop: () => void;
   currentFrame: () => number;
+  currentClip: () => string | null;
   loadedClips: () => string[];
   on: (event: "click" | "hover", cb: () => void) => () => void;
 };
@@ -42,6 +43,8 @@ type NormClip = {
   frames: number[][];
   seq: Frame[];
   loop: boolean;
+  anchor?: number;
+  variants?: Frame[][];
 };
 
 // Static idle → a slow uneven 1px settle reads as breathing until a hand-drawn
@@ -64,7 +67,8 @@ function normalize(name: string, clip: RawClip): NormClip | null {
   } else {
     seq = [{ frame: 0, ms: 400, off: 0 }];
   }
-  return { name, w: clip.w, h: clip.h, palette: clip.palette, frames, seq, loop };
+  const variants = clip.variants?.map((v) => v.map((s) => ({ frame: s.frame, ms: s.ms, off: 0 })));
+  return { name, w: clip.w, h: clip.h, palette: clip.palette, frames, seq, loop, anchor: clip.anchor, variants };
 }
 
 class MascotEngine {
@@ -73,6 +77,9 @@ class MascotEngine {
   private clips = new Map<string, NormClip>();
   private active: NormClip | null = null;
   private queue: string[] = [];
+  private pendingAnchor: string | null = null;
+  private baseStep = 0; // where the base loop was when a one-shot took over
+  private seqOverride: Frame[] | null = null; // the variant chosen for this play
   private step = 0;
   private acc = 0;
   private last = 0;
@@ -128,50 +135,95 @@ class MascotEngine {
     const clip = this.clips.get(name);
     if (!clip || this.reduced) return;
     if (this.active && this.active.name === name && clip.loop) return; // already sustained
-    const onBase = !this.active || this.active.name === BASE_CLIP;
-    if (onBase || opts?.queue === false) {
-      this.active = clip;
-      this.step = 0;
-      this.acc = 0;
-    } else {
+    if (this.active && !this.active.loop && opts?.queue !== false) {
+      // A one-shot is mid-flight — let it finish, then chain.
       this.queue.push(name);
+    } else if (
+      clip.anchor != null &&
+      this.active?.name === BASE_CLIP &&
+      this.seq()[this.step]?.frame !== clip.anchor
+    ) {
+      // Anchored clip requested off-pose: hold it until the base loop rests on
+      // its anchor frame, so the swap is pixel-continuous (no pose jump).
+      this.pendingAnchor = name;
+    } else {
+      // From the base on-pose, from a sustained state (a direct mode swap —
+      // all states share the rest-pose body), or unanchored.
+      this.startClip(clip);
     }
     this.ensureRunning();
   }
 
+  /** The sequence currently driving the active clip (a chosen variant or the default). */
+  private seq(): Frame[] {
+    return this.seqOverride ?? this.active?.seq ?? [];
+  }
+
+  private startClip(clip: NormClip) {
+    if (this.active && this.active.name === BASE_CLIP) this.baseStep = this.step;
+    this.active = clip;
+    // One-shots with variants play a randomly chosen sequence each time, so
+    // repeated fires read as natural motion instead of a mechanical loop.
+    this.seqOverride = clip.variants?.length
+      ? clip.variants[Math.floor(Math.random() * clip.variants.length)]
+      : null;
+    this.step = 0;
+    this.acc = 0;
+  }
+
+  private returnToBase() {
+    const b = this.base();
+    this.active = b;
+    this.seqOverride = null;
+    // Resume the base loop on the pose the one-shot was anchored over —
+    // restarting its hold — so there is never a pose jump.
+    this.step = b && this.baseStep < b.seq.length ? this.baseStep : 0;
+  }
+
   stop() {
     this.queue = [];
-    const b = this.base();
-    if (b) {
-      this.active = b;
-      this.step = 0;
+    this.pendingAnchor = null;
+    if (this.base()) {
+      this.returnToBase();
       this.acc = 0;
     }
   }
 
   private advance() {
     if (!this.active) return;
-    const seq = this.active.seq;
+    const seq = this.seq();
     if (this.acc < seq[this.step].ms) return;
     this.acc = 0;
     this.step++;
-    if (this.step < seq.length) return;
-
-    if (this.active.loop) {
-      this.step = 0;
-    } else if (this.queue.length) {
-      this.active = this.clips.get(this.queue.shift()!) ?? this.base();
-      this.step = 0;
-    } else {
-      this.active = this.base();
-      this.step = 0;
+    if (this.step >= seq.length) {
+      if (this.active.loop) {
+        this.step = 0;
+      } else if (this.queue.length) {
+        const next = this.clips.get(this.queue.shift()!);
+        if (next) {
+          this.startClip(next);
+        } else {
+          this.returnToBase();
+        }
+      } else {
+        this.returnToBase();
+      }
+    }
+    // Fire a pending anchored one-shot the moment the base rests on its anchor.
+    if (this.pendingAnchor && this.active && this.active.name === BASE_CLIP) {
+      const pending = this.clips.get(this.pendingAnchor);
+      if (pending && this.seq()[this.step]?.frame === pending.anchor) {
+        this.pendingAnchor = null;
+        this.startClip(pending);
+      }
     }
   }
 
   private draw() {
     if (!this.active) return;
     const c = this.active;
-    const cur = c.seq[this.step] ?? c.seq[0];
+    const seq = this.seq();
+    const cur = seq[this.step] ?? seq[0];
     const indices = c.frames[cur.frame] ?? c.frames[0];
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -228,7 +280,11 @@ class MascotEngine {
   }
 
   currentFrame() {
-    return this.active ? this.active.seq[this.step]?.frame ?? 0 : 0;
+    return this.active ? this.seq()[this.step]?.frame ?? 0 : 0;
+  }
+
+  currentClip() {
+    return this.active?.name ?? null;
   }
 
   loadedNames() {
@@ -257,6 +313,7 @@ export const HefestoSprite = forwardRef<
       setMode: (m) => applyMode(m),
       stop: () => engineRef.current?.stop(),
       currentFrame: () => engineRef.current?.currentFrame() ?? 0,
+      currentClip: () => engineRef.current?.currentClip() ?? null,
       loadedClips: () => engineRef.current?.loadedNames() ?? [],
       on: (event, cb) => {
         const el = canvasRef.current;

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Hefesto, type HefestoHandle } from "@/components/HefestoSprite";
-import { EmberGlow } from "@/components/EmberGlow";
 import { CLIP_FILES, SUSTAINED, type ClipName, type Mode } from "@/lib/mascot";
 
 /*
@@ -22,12 +21,48 @@ export default function MascotDevPage() {
   const [mode, setMode] = useState<Mode>("personal");
   const [loaded, setLoaded] = useState<string[]>([]);
   const [frame, setFrame] = useState(0);
+  const [clip, setClip] = useState("idle");
+  const [fired, setFired] = useState<Record<string, number>>({});
 
-  // Live frame readout — poll the engine a few times a second.
+  // Live engine readout — poll fast enough to catch a 110ms blink.
   useEffect(() => {
-    const id = setInterval(() => setFrame(hefesto.current?.currentFrame() ?? 0), 120);
+    const id = setInterval(() => {
+      setFrame(hefesto.current?.currentFrame() ?? 0);
+      setClip(hefesto.current?.currentClip() ?? "idle");
+    }, 50);
     return () => clearInterval(id);
   }, []);
+
+  // Ambient life — the random timers from the trigger table: a blink every few
+  // seconds, a tail flick now and then, a doubt "?" between breaths at long
+  // intervals. Gestures skip while a sustained state (typing/listening) plays;
+  // the engine's anchor logic makes each land pixel-continuous on the rest pose.
+  useEffect(() => {
+    if (!loaded.includes("blink") && !loaded.includes("tail")) return;
+    let alive = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const schedule = (name: ClipName, min: number, spread: number) => {
+      if (!loaded.includes(name)) return;
+      const tick = () => {
+        if (!alive) return;
+        if ((hefesto.current?.currentClip() ?? "idle") !== "idle") {
+          timers.push(setTimeout(tick, 4000));
+          return;
+        }
+        hefesto.current?.play(name);
+        setFired((f) => ({ ...f, [name]: (f[name] ?? 0) + 1 }));
+        timers.push(setTimeout(tick, min + Math.random() * spread));
+      };
+      timers.push(setTimeout(tick, min + Math.random() * spread));
+    };
+    schedule("blink", 2600, 3400);
+    schedule("tail", 3500, 4500);
+    schedule("doubt", 15000, 15000); // long intervals — rarer than blink/tail
+    return () => {
+      alive = false;
+      timers.forEach(clearTimeout);
+    };
+  }, [loaded]);
 
   function pickMode(m: Mode) {
     setMode(m);
@@ -66,7 +101,12 @@ export default function MascotDevPage() {
           >
             {dark ? "Ember" : "Cream"} bg
           </button>
-          <span className="opacity-55">frame #{frame}</span>
+          <span className="opacity-55">
+            clip: <span style={{ color: clip === "idle" ? undefined : "var(--color-mode)" }}>{clip}</span> · frame #{frame}
+          </span>
+          <span className="opacity-40">
+            {Object.entries(fired).map(([n, c]) => `${n} ×${c}`).join(" · ") || "ambient timers armed"}
+          </span>
         </div>
 
         {/* Mode tint — the cat keeps its palette; the UI accents follow the mode */}
@@ -90,7 +130,7 @@ export default function MascotDevPage() {
             ))}
             <span
               className="ml-2 size-8 rounded-full"
-              style={{ boxShadow: "0 0 26px 6px var(--color-mode)", background: "var(--color-mode)" }}
+              style={{ background: "var(--color-mode)" }}
               aria-hidden="true"
             />
           </div>
@@ -143,12 +183,9 @@ export default function MascotDevPage() {
         </div>
       </div>
 
-      {/* Hero — the reveal frame */}
+      {/* Hero — the reveal frame. No glow behind the cat (art direction). */}
       <div className="relative flex-1 w-full grid place-items-center py-10">
-        <EmberGlow className="w-[320px] h-[160px] opacity-70" />
-        <div className="relative">
-          <Hefesto ref={hefesto} scale={scale} mode={mode} onReady={({ clips }) => setLoaded(clips)} />
-        </div>
+        <Hefesto ref={hefesto} scale={scale} mode={mode} onReady={({ clips }) => setLoaded(clips)} />
       </div>
 
       {/* Integer-scale reference row */}
