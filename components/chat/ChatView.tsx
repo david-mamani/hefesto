@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/Composer";
 import { ChatMessageBubble, TypingIndicator, type ChatMessage } from "@/components/ChatMessages";
 import { PathCard } from "@/components/chat/PathCard";
+import { HefestoSprite, type HefestoHandle } from "@/components/HefestoSprite";
+import { RingAvatar } from "@/components/RingAvatar";
 import type { ChatEvidence, ChatPathPerson } from "@/app/api/chat/route";
 
 export type ChatResponse = {
@@ -59,9 +61,15 @@ function FeedbackArrow({ down = false, active = false }: { down?: boolean; activ
 export function ChatView({
   initialQuestion,
   onResponse,
+  onSendingChange,
+  headerInitial,
 }: {
   initialQuestion?: string;
   onResponse?: (response: ChatResponse) => void;
+  /** Fires when a recall starts/ends — hosts drive their own mascot with it. */
+  onSendingChange?: (sending: boolean) => void;
+  /** Renders the mobile chat header (avatar · title · small mascot, M02). */
+  headerInitial?: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -69,6 +77,18 @@ export function ChatView({
   const conversationRef = useRef<string | null>(null);
   const autoSent = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const hefesto = useRef<HefestoHandle>(null);
+
+  // The header mascot types along while Hefesto works out an answer.
+  const onSendingChangeRef = useRef(onSendingChange);
+  onSendingChangeRef.current = onSendingChange;
+  useEffect(() => {
+    onSendingChangeRef.current?.(sending);
+    const h = hefesto.current;
+    if (!h) return;
+    if (sending) h.play("typing");
+    else h.stop(); // also cancels an anchor-pending typing on fast answers
+  }, [sending]);
 
   const send = useCallback(
     async (text: string) => {
@@ -105,6 +125,7 @@ export function ChatView({
         ]);
         onResponse?.(data);
       } catch (error) {
+        hefesto.current?.play("doubt");
         setMessages((prev) => [
           ...prev,
           {
@@ -148,6 +169,13 @@ export function ChatView({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {headerInitial && (
+        <header className="flex items-center gap-3 pt-12">
+          <RingAvatar initial={headerInitial} />
+          <h1 className="font-semibold text-[26px] text-ink">Chat</h1>
+          <HefestoSprite ref={hefesto} scale={2} className="ml-auto -mt-3" ambient />
+        </header>
+      )}
       <div className="flex-1 flex flex-col gap-4 pt-7 overflow-y-auto">
         {messages.map((message) => (
           <div key={message.id}>

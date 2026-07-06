@@ -13,11 +13,13 @@ export function Composer({
   placeholder = "Message Hefesto...",
   onSend,
   onVoice,
+  onRecordingChange,
   disabled = false,
 }: {
   placeholder?: string;
   onSend?: (text: string) => void | Promise<void>;
   onVoice?: (audio: Blob, seconds: number) => void | Promise<void>;
+  onRecordingChange?: (recording: boolean) => void;
   disabled?: boolean;
 }) {
   const [text, setText] = useState("");
@@ -60,6 +62,7 @@ export function Composer({
         const dur = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
         const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
         setRecording(false);
+        onRecordingChange?.(false);
         stopTimer();
         if (blob.size) void onVoice(blob, dur);
       };
@@ -67,6 +70,7 @@ export function Composer({
       startedAtRef.current = Date.now();
       rec.start();
       setRecording(true);
+      onRecordingChange?.(true);
       setSeconds(0);
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     } catch {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EmberGlow } from "@/components/EmberGlow";
-import { HefestoSprite } from "@/components/HefestoSprite";
+import { HefestoSprite, type HefestoHandle } from "@/components/HefestoSprite";
 import { SpeechBubble } from "@/components/SpeechBubble";
 import { ThoughtBubble } from "@/components/ThoughtBubble";
 import { Composer } from "@/components/Composer";
@@ -43,7 +43,37 @@ export function HomeExperience({
   const { state } = capture;
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [ask, setAsk] = useState<AskState>({ phase: "idle" });
+  const [recording, setRecording] = useState(false);
   const conversationRef = useRef<string | null>(null);
+  const hefesto = useRef<HefestoHandle>(null);
+
+  // Domain → animation (PRD §22): listening while a voice note records, typing
+  // while Hefesto extracts/forges/thinks, doubt on errors. Ambient life
+  // (blink/tail/rare "?") runs on its own whenever he is just idling.
+  useEffect(() => {
+    const h = hefesto.current;
+    if (!h) return;
+    if (recording) {
+      h.play("listening");
+      return;
+    }
+    if (state.phase === "extracting" || state.phase === "forging" || ask.phase === "thinking") {
+      h.play("typing");
+      return;
+    }
+    if (state.phase === "error" || ask.phase === "error") {
+      h.stop();
+      h.play("doubt");
+      return;
+    }
+    // Settled: also cancels an anchor-pending typing that never got to fire
+    // (answers can arrive before the breath reaches the rest pose).
+    h.stop();
+  }, [recording, state.phase, ask.phase]);
+
+  useEffect(() => {
+    if (briefingOpen) hefesto.current?.play("alert");
+  }, [briefingOpen]);
 
   // On open, push the cold-contact nudge to the user's linked Telegram (throttled
   // server-side). The Home card itself is already rendered from server data.
@@ -162,7 +192,7 @@ export function HomeExperience({
       </div>
 
       <div className={`flex justify-center ${thought ? "mt-[20px]" : "-mt-[7px]"}`}>
-        <HefestoSprite scale={6} />
+        <HefestoSprite ref={hefesto} scale={6} ambient />
       </div>
 
       {forging ? (
@@ -191,6 +221,7 @@ export function HomeExperience({
         <Composer
           onSend={handleSend}
           onVoice={(audio, seconds) => capture.startVoice(audio, seconds)}
+          onRecordingChange={setRecording}
           disabled={
             state.phase === "extracting" || state.phase === "forging" || ask.phase === "thinking"
           }

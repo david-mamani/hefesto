@@ -181,9 +181,11 @@ class MascotEngine {
   }
 
   stop() {
+    // Safe to call anytime: cancels queued and anchor-pending clips, and only
+    // touches the pose when something other than the base is actually playing.
     this.queue = [];
     this.pendingAnchor = null;
-    if (this.base()) {
+    if (this.active && this.active.name !== BASE_CLIP && this.base()) {
       this.returnToBase();
       this.acc = 0;
     }
@@ -298,9 +300,11 @@ export const HefestoSprite = forwardRef<
     scale?: number;
     className?: string;
     mode?: Mode;
+    /** Ambient life: random blinks, tail flicks and a rare doubt "?" while idle. */
+    ambient?: boolean;
     onReady?: (info: { clips: string[] }) => void;
   }
->(function HefestoSprite({ scale = 6, className, mode, onReady }, ref) {
+>(function HefestoSprite({ scale = 6, className, mode, ambient = false, onReady }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<MascotEngine | null>(null);
   const onReadyRef = useRef(onReady);
@@ -388,6 +392,32 @@ export const HefestoSprite = forwardRef<
   useEffect(() => {
     if (mode) applyMode(mode);
   }, [mode]);
+
+  // Ambient life — random gestures while idling (skipped during sustained
+  // states and one-shots; the anchor logic lands them on the rest pose).
+  useEffect(() => {
+    if (!ambient) return;
+    let alive = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const schedule = (name: ClipName, min: number, spread: number) => {
+      const tick = () => {
+        if (!alive) return;
+        const engine = engineRef.current;
+        if (engine && engine.loadedNames().includes(name) && engine.currentClip() === BASE_CLIP) {
+          engine.play(name);
+        }
+        timers.push(setTimeout(tick, min + Math.random() * spread));
+      };
+      timers.push(setTimeout(tick, min + Math.random() * spread));
+    };
+    schedule("blink", 2600, 3400);
+    schedule("tail", 3500, 4500);
+    schedule("doubt", 45000, 45000); // rare: every 45-90s
+    return () => {
+      alive = false;
+      timers.forEach(clearTimeout);
+    };
+  }, [ambient]);
 
   return (
     <canvas
