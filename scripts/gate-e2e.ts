@@ -228,7 +228,9 @@ async function main() {
     log(
       "capture.confirm",
       confirm.status === 200 && Boolean(personId) && Boolean(filename),
-      `→ ${confirm.status} personId=${personId} filename=${filename}`
+      `→ ${confirm.status} personId=${personId} filename=${filename}${
+        confirm.json?.error ? ` error="${confirm.json.error}"` : ""
+      }`
     );
     if (!personId || !filename) throw new Error("confirm failed — cannot continue");
 
