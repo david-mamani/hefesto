@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
 
+// The judges' pre-seeded account — intentionally public (also in the README).
+const DEMO_EMAIL = "judge@hefesto.org";
+const DEMO_PASSWORD = "forge-my-network";
+
 function KeyIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -75,6 +79,25 @@ export default function LoginPage() {
       options: { redirectTo: `${location.origin}/auth/callback?next=/` },
     });
     if (authError) setError(authError.message);
+  }
+
+  async function handleDemo() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: DEMO_EMAIL,
+      password: DEMO_PASSWORD,
+    });
+    if (authError) {
+      setError(authError.message);
+      setPending(false);
+      return;
+    }
+    await fetch("/api/provision", { method: "POST" }).catch(() => {});
+    router.replace("/");
+    router.refresh();
   }
 
   const heading = mode === "login" ? "Log in" : "Sign up";
@@ -174,6 +197,20 @@ export default function LoginPage() {
             </span>
             <span className="ml-[18px] text-[13px] font-medium text-[#1C1611]">
               Continue with Google
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={pending}
+            className="w-full h-12 rounded-3xl bg-white shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] flex items-center px-2.5 mt-[10px] disabled:opacity-70"
+          >
+            <span className="size-8 rounded-full bg-white ring-1 ring-[rgba(28,22,17,0.08)] grid place-items-center text-[14px]">
+              🐱
+            </span>
+            <span className="ml-[18px] text-[13px] font-medium text-[#1C1611]">
+              Try the demo — pre-loaded memory
             </span>
           </button>
         </section>

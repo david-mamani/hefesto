@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ChatView } from "@/components/chat/ChatView";
+import { SUGGESTED_QUESTIONS } from "@/lib/suggested";
 
 export default async function ChatPage({
   searchParams,
@@ -18,7 +19,11 @@ export default async function ChatPage({
 
   return (
     <main className="px-6 flex flex-col min-h-[calc(100dvh-104px)]">
-      <ChatView headerInitial={initial} initialQuestion={q?.trim() || undefined} />
+      <ChatView
+        headerInitial={initial}
+        initialQuestion={q?.trim() || undefined}
+        suggestions={SUGGESTED_QUESTIONS}
+      />
     </main>
   );
 }

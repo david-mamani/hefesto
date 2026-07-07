@@ -1,22 +1,19 @@
 import { ChevronRightIcon } from "@/components/icons";
+import { SUGGESTED_QUESTIONS } from "@/lib/suggested";
 
 export type ThinkingPathNode = { label: string; initial: string };
 export type ThinkingEvidence = { initial: string; title: string; quote: string };
-
-const SUGGESTED = [
-  "Who's going cold this month?",
-  "Brief me on Ana",
-  "Who works in fintech?",
-];
 
 export function ThinkingRail({
   path,
   hops,
   evidence,
+  onAsk,
 }: {
   path?: ThinkingPathNode[];
   hops?: number;
   evidence?: ThinkingEvidence[];
+  onAsk?: (question: string) => void;
 }) {
   return (
     <aside className="glass rounded-[28px] w-[440px] shrink-0 px-[22px] py-[20px]">
@@ -73,11 +70,12 @@ export function ThinkingRail({
 
       <p className="micro-label mt-6 text-[10px] tracking-[1px]">Suggested</p>
       <div className="flex flex-col gap-[10px] mt-[10px]">
-        {SUGGESTED.map((question) => (
+        {SUGGESTED_QUESTIONS.map((question) => (
           <button
             key={question}
             type="button"
-            className="bg-surface-soft rounded-[22px] shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] h-11 flex items-center justify-between px-5 text-left"
+            onClick={() => onAsk?.(question)}
+            className="bg-surface-soft rounded-[22px] shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] min-h-[44px] py-1 flex items-center justify-between gap-3 px-5 text-left"
           >
             <span className="text-[12.5px] font-medium text-ink">{question}</span>
             <ChevronRightIcon color="#1C1611" />

@@ -63,6 +63,8 @@ export function ChatView({
   onResponse,
   onSendingChange,
   headerInitial,
+  suggestions,
+  sendRef,
 }: {
   initialQuestion?: string;
   onResponse?: (response: ChatResponse) => void;
@@ -70,6 +72,10 @@ export function ChatView({
   onSendingChange?: (sending: boolean) => void;
   /** Renders the mobile chat header (avatar · title · small mascot, M02). */
   headerInitial?: string;
+  /** Empty-state question chips (mobile — desktop surfaces them in the rail). */
+  suggestions?: string[];
+  /** Lets a host (the desktop rail) push a question into this conversation. */
+  sendRef?: React.MutableRefObject<((text: string) => void) | null>;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
@@ -152,6 +158,14 @@ export function ChatView({
   }, [initialQuestion, send]);
 
   useEffect(() => {
+    if (!sendRef) return;
+    sendRef.current = send;
+    return () => {
+      sendRef.current = null;
+    };
+  }, [sendRef, send]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
@@ -177,6 +191,23 @@ export function ChatView({
         </header>
       )}
       <div className="flex-1 flex flex-col gap-4 pt-7 overflow-y-auto">
+        {messages.length === 0 && !sending && !!suggestions?.length && (
+          <div>
+            <p className="micro-label text-[10px] tracking-[1px]">Try asking</p>
+            <div className="flex flex-col gap-[10px] mt-[10px]">
+              {suggestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => void send(question)}
+                  className="glass rounded-[22px] min-h-[44px] flex items-center px-5 text-left"
+                >
+                  <span className="text-[12.5px] font-medium text-ink">{question}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {messages.map((message) => (
           <div key={message.id}>
             <ChatMessageBubble message={message} />
