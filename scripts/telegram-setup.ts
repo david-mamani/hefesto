@@ -52,14 +52,19 @@ async function find() {
 
 async function setup(email: string | undefined) {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  const chatId = Number(process.env.TELEGRAM_DEMO_CHAT_ID);
   if (!secret) throw new Error("TELEGRAM_WEBHOOK_SECRET is not set");
-  if (!chatId) throw new Error("TELEGRAM_DEMO_CHAT_ID is not set (run `find` first)");
 
   await telegram.setWebhook(WEBHOOK_URL, secret);
+  await telegram.setMyCommands([
+    { command: "briefing", description: "Pre-meeting briefing: /briefing <name>" },
+    { command: "help", description: "What Hefesto can do here" },
+  ]);
   console.log(`✔ webhook set → ${WEBHOOK_URL}`);
 
+  // Optional direct link (admin shortcut) — normal users link via /start deep-link.
   if (email) {
+    const chatId = Number(process.env.TELEGRAM_DEMO_CHAT_ID);
+    if (!chatId) throw new Error("TELEGRAM_DEMO_CHAT_ID is not set (run `find` first)");
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,

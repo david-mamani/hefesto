@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RingAvatar } from "@/components/RingAvatar";
 import { Toggle } from "@/components/settings/Toggle";
+import { useTelegramLink } from "@/components/settings/useTelegramLink";
 import { saveTheme, saveNudges, THEME_ORDER, type ThemePref } from "@/lib/theme";
 
 /*
@@ -25,26 +26,23 @@ function Chevron() {
   );
 }
 
-// Decorative QR block per the frame — the real one-time link ships with the bot phase.
-function QrBlock() {
-  const cells = [
-    [0, 0, 3], [5, 0, 3], [2, 1, 1], [4, 2, 1], [1, 3, 1], [3, 3, 1], [5, 3, 1],
-    [2, 4, 1], [0, 5, 3], [4, 5, 1], [5, 6, 1],
-  ] as const;
+// The live one-time QR (M10e). Ink modules on the cream card; a green check
+// takes its place once the /start handshake lands.
+function QrBlock({ linked, qrDataUrl }: { linked: boolean; qrDataUrl: string | null }) {
   return (
-    <svg width="118" height="118" viewBox="0 0 9 9" className="rounded-[10px] bg-cream shrink-0" aria-hidden="true">
-      {cells.map(([x, y, s], i) =>
-        s === 3 ? (
-          <g key={i}>
-            <rect x={x + 1} y={y + 1} width="2" height="2" fill="#141414" />
-            <rect x={x + 1.5} y={y + 1.5} width="1" height="1" fill="#f6f1e8" />
-            <rect x={x + 1.75} y={y + 1.75} width="0.5" height="0.5" fill="#141414" />
-          </g>
-        ) : (
-          <rect key={i} x={x + 1.25} y={y + 1.25} width="0.6" height="0.6" fill="#141414" />
-        )
+    <div className="size-[118px] rounded-[10px] bg-cream shrink-0 flex items-center justify-center overflow-hidden">
+      {linked ? (
+        <svg width="40" height="40" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <circle cx="22" cy="22" r="21" stroke="#3FB57F" strokeWidth="2" />
+          <path d="M13 22.5L19.5 29L31 16" stroke="#3FB57F" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : qrDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- data URL, no optimizer pass
+        <img src={qrDataUrl} alt="Scan to open the bot" className="size-[104px] [image-rendering:pixelated]" />
+      ) : (
+        <p className="text-[10px] text-muted">…</p>
       )}
-    </svg>
+    </div>
   );
 }
 
@@ -68,6 +66,7 @@ export function DesktopSettings({
   const [theme, setTheme] = useState<ThemePref>(initialTheme);
   const [nudges, setNudges] = useState(initialNudges);
   const [hint, setHint] = useState(false);
+  const tg = useTelegramLink(telegramLinked);
 
   function stub() {
     setHint(true);
@@ -181,24 +180,38 @@ export function DesktopSettings({
                   Scan the QR with your phone — capture voice notes and get nudges right in Telegram.
                 </p>
                 <p className="micro-label text-[9px] tracking-[0.9px] mt-5">
-                  Status · {telegramLinked ? "Linked" : "Not linked"}
+                  Status · {tg.linked ? "Linked" : "Not linked"}
                 </p>
-                <button
-                  type="button"
-                  onClick={stub}
-                  className="mt-3 h-[46px] px-6 rounded-[23px] flex items-center gap-3 text-[13px] font-medium text-cream"
-                  style={{ background: "rgba(83,72,63,0.92)" }}
-                >
-                  <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
-                    <path d="M15 1L1 6.2L5.4 8L11.5 3.6L7.3 8.8L12.8 13L15 1Z" stroke="#F6F1E8" strokeWidth="1.3" strokeLinejoin="round" />
-                  </svg>
-                  @HefestoBot
-                </button>
+                {tg.linked ? (
+                  <button
+                    type="button"
+                    onClick={tg.disconnect}
+                    disabled={tg.busy}
+                    className="mt-3 h-[46px] px-6 rounded-[23px] bg-white text-[13px] font-medium text-[#1C1611] disabled:opacity-60"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <a
+                    href={tg.url ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`mt-3 h-[46px] px-6 rounded-[23px] inline-flex items-center gap-3 text-[13px] font-medium text-cream ${
+                      tg.url ? "" : "pointer-events-none opacity-60"
+                    }`}
+                    style={{ background: "rgba(83,72,63,0.92)" }}
+                  >
+                    <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+                      <path d="M15 1L1 6.2L5.4 8L11.5 3.6L7.3 8.8L12.8 13L15 1Z" stroke="#F6F1E8" strokeWidth="1.3" strokeLinejoin="round" />
+                    </svg>
+                    {tg.botUsername ? `@${tg.botUsername}` : "@…"}
+                  </a>
+                )}
                 <p className="text-[10.5px] text-muted mt-4">
                   One-time secure link · expires in 10 min · disconnect anytime
                 </p>
               </div>
-              <QrBlock />
+              <QrBlock linked={tg.linked} qrDataUrl={tg.qrDataUrl} />
             </div>
           </section>
 

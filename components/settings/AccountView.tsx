@@ -30,26 +30,37 @@ function Row({
   label,
   value,
   onClick,
+  href,
   last = false,
 }: {
   label: string;
   value?: string;
   onClick?: () => void;
+  href?: string;
   last?: boolean;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full h-[60px] flex items-center px-[18px] text-left ${
-        last ? "" : "border-b border-[rgba(28,22,17,0.08)]"
-      }`}
-    >
+  const className = `w-full h-[60px] flex items-center px-[18px] text-left ${
+    last ? "" : "border-b border-[rgba(28,22,17,0.08)]"
+  }`;
+  const body = (
+    <>
       <span className="text-[13.5px] font-medium text-ink">{label}</span>
       <span className="ml-auto flex items-center gap-4">
         {value && <span className="text-[11.5px] text-muted">{value}</span>}
         <Chevron />
       </span>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {body}
     </button>
   );
 }
@@ -100,7 +111,7 @@ export function AccountView({
 
       <section className="glass rounded-[26px] mt-[32px] overflow-hidden">
         <Row label="Edit profile" onClick={stub} />
-        <Row label="Connect Telegram" value={telegramLinked ? "Linked" : "Not linked"} onClick={stub} />
+        <Row label="Connect Telegram" value={telegramLinked ? "Linked" : "Not linked"} href="/account/telegram" />
         <Row label="Language" value="English" onClick={stub} />
         <Row label="Privacy & data" onClick={stub} />
         <Row label="Appearance" value={PREF_LABEL[theme]} onClick={cycleTheme} last />

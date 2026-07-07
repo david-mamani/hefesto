@@ -11,6 +11,24 @@ function token(): string {
   return t;
 }
 
+/** Bare bot username — tolerates "@name", "t.me/name" and full-URL forms in the env var. */
+export function botUsername(): string {
+  const raw = process.env.TELEGRAM_BOT_USERNAME ?? "";
+  const bare = raw
+    .replace(/^https?:\/\//i, "")
+    .replace(/^(www\.)?t(elegram)?\.me\//i, "")
+    .replace(/^@/, "")
+    .replace(/\/+$/, "")
+    .trim();
+  if (!bare) throw new Error("TELEGRAM_BOT_USERNAME is not set");
+  return bare;
+}
+
+/** One-tap link that opens the bot with `/start <token>` prefilled. */
+export function deepLink(startToken: string): string {
+  return `https://t.me/${botUsername()}?start=${startToken}`;
+}
+
 async function call<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`${API}/bot${token()}/${method}`, {
     method: "POST",
@@ -66,6 +84,9 @@ export const telegram = {
     }),
 
   deleteWebhook: () => call("deleteWebhook", { drop_pending_updates: true }),
+
+  setMyCommands: (commands: { command: string; description: string }[]) =>
+    call("setMyCommands", { commands }),
 
   getWebhookInfo: () => call<Record<string, unknown>>("getWebhookInfo", {}),
 
