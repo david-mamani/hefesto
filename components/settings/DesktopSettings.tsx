@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { RingAvatar } from "@/components/RingAvatar";
 import { Toggle } from "@/components/settings/Toggle";
+import { EditProfileModal } from "@/components/settings/EditProfileModal";
 import { useTelegramLink } from "@/components/settings/useTelegramLink";
 import { saveTheme, saveNudges, THEME_ORDER, type ThemePref } from "@/lib/theme";
 
@@ -63,14 +65,28 @@ export function DesktopSettings({
   initialTheme: ThemePref;
   initialNudges: boolean;
 }) {
+  const router = useRouter();
   const [theme, setTheme] = useState<ThemePref>(initialTheme);
   const [nudges, setNudges] = useState(initialNudges);
-  const [hint, setHint] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
+  const [forgetBusy, setForgetBusy] = useState(false);
   const tg = useTelegramLink(telegramLinked);
 
-  function stub() {
-    setHint(true);
-    setTimeout(() => setHint(false), 2600);
+  async function forgetEverything() {
+    if (forgetBusy) return;
+    setForgetBusy(true);
+    try {
+      await fetch("/api/forget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "everything" }),
+      });
+    } finally {
+      setForgetBusy(false);
+      setConfirmForget(false);
+      router.refresh();
+    }
   }
 
   return (
@@ -91,7 +107,7 @@ export function DesktopSettings({
                 </p>
                 <button
                   type="button"
-                  onClick={stub}
+                  onClick={() => setEditOpen(true)}
                   className="mt-3 h-[30px] px-5 rounded-[15px] bg-white text-[12px] font-medium text-[#1C1611]"
                 >
                   Edit profile
@@ -118,17 +134,10 @@ export function DesktopSettings({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={stub}
-              className="w-full flex items-center h-[56px] border-b border-[rgba(28,22,17,0.08)] text-left"
-            >
+            <div className="flex items-center h-[56px] border-b border-[rgba(28,22,17,0.08)]">
               <span className="text-[13.5px] font-medium text-ink">Language</span>
-              <span className="ml-auto flex items-center gap-4">
-                <span className="text-[11.5px] text-muted">English</span>
-                <Chevron />
-              </span>
-            </button>
+              <span className="ml-auto text-[11.5px] text-muted">English</span>
+            </div>
 
             <div className="flex items-center h-[56px]">
               <span className="text-[13.5px] font-medium text-ink">Appearance</span>
@@ -162,12 +171,6 @@ export function DesktopSettings({
               Log out
             </button>
           </form>
-          <p
-            className={`text-[10.5px] text-muted -mt-3 transition-opacity ${hint ? "opacity-100" : "opacity-0"}`}
-            aria-hidden={!hint}
-          >
-            Coming soon.
-          </p>
         </div>
 
         {/* Right column — connections + privacy */}
@@ -220,31 +223,53 @@ export function DesktopSettings({
               Your memories are yours. Capture is always intentional and you can erase anything — or
               everything — at any time.
             </p>
-            <button
-              type="button"
-              onClick={stub}
+            <a
+              href="/api/export"
+              download
               className="w-full flex items-center h-[52px] border-b border-[rgba(28,22,17,0.08)] text-left mt-2"
             >
               <span className="text-[13.5px] font-medium text-ink">Export my data</span>
               <span className="ml-auto">
                 <Chevron />
               </span>
-            </button>
-            <div className="flex items-center gap-4 mt-5">
-              <button
-                type="button"
-                onClick={stub}
-                className="w-[190px] h-[46px] rounded-[23px] bg-ember text-cream text-[13px] font-medium shrink-0"
-              >
-                Forget everything
-              </button>
-              <p className="text-[10.5px] text-muted leading-snug max-w-[220px]">
-                removes ALL your memories — cannot be undone
-              </p>
-            </div>
+            </a>
+            {confirmForget ? (
+              <div className="flex items-center gap-4 mt-5">
+                <button
+                  type="button"
+                  onClick={forgetEverything}
+                  disabled={forgetBusy}
+                  className="w-[220px] h-[46px] rounded-[23px] bg-ember text-cream text-[13px] font-medium shrink-0 disabled:opacity-60"
+                >
+                  {forgetBusy ? "Forgetting…" : "Yes, forget everything"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmForget(false)}
+                  className="h-[46px] px-6 rounded-[23px] bg-white text-[13px] font-medium text-[#1C1611] shrink-0"
+                >
+                  Keep
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setConfirmForget(true)}
+                  className="w-[190px] h-[46px] rounded-[23px] bg-ember text-cream text-[13px] font-medium shrink-0"
+                >
+                  Forget everything
+                </button>
+                <p className="text-[10.5px] text-muted leading-snug max-w-[220px]">
+                  removes ALL your memories — cannot be undone
+                </p>
+              </div>
+            )}
           </section>
         </div>
       </div>
+
+      {editOpen && <EditProfileModal currentName={name} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

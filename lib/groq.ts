@@ -82,6 +82,42 @@ export async function buildBriefing(name: string, context: string): Promise<Brie
   };
 }
 
+const DRAFT_SYSTEM = `You draft a short opener message the user can send to reconnect with someone they know.
+Use ONLY the provided context about that person — never invent facts.
+
+Return ONLY a JSON object:
+{
+  "text": string   // 2-3 warm, natural sentences in first person, ready to send. Reference one concrete shared detail (their dog, their ask, their project). No greetings like "Dear", no sign-off, no emojis.
+}
+
+Keep it in English, casual and specific. If the context is thin, keep it simple and honest.`;
+
+export async function draftOpener(name: string, context: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not set");
+
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: DRAFT_SYSTEM },
+        { role: "user", content: `Contact: ${name}\n\nContext:\n${context}` },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Groq draft failed (${res.status}): ${body.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { choices: { message: { content: string } }[] };
+  const parsed = JSON.parse(data.choices[0]?.message?.content ?? "{}");
+  return typeof parsed.text === "string" ? parsed.text : "";
+}
+
 export async function extractCapture(text: string): Promise<ExtractedCapture> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not set");

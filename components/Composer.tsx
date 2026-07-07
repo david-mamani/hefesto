@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { PhotoIcon, MicIcon, ArrowUpIcon } from "@/components/icons";
+import { MicIcon, ArrowUpIcon } from "@/components/icons";
 
 function fmt(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -15,20 +15,23 @@ export function Composer({
   onVoice,
   onRecordingChange,
   disabled = false,
-  photo = true,
   large = false,
+  initialText = "",
+  inputId,
 }: {
   placeholder?: string;
   onSend?: (text: string) => void | Promise<void>;
   onVoice?: (audio: Blob, seconds: number) => void | Promise<void>;
   onRecordingChange?: (recording: boolean) => void;
   disabled?: boolean;
-  /** M10d's desktop chat composer has no photo button. */
-  photo?: boolean;
   /** M10d: 54px input pill + 54px send circle (mobile stays 44px). */
   large?: boolean;
+  /** Prefill (e.g. "Log update" arrives with the person's name ready). */
+  initialText?: string;
+  /** Lets hosts focus the input (e.g. the first-capture invitation cards). */
+  inputId?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -87,16 +90,6 @@ export function Composer({
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
-      {photo && (
-        <button
-          type="button"
-          aria-label="Add a photo"
-          className="size-11 shrink-0 rounded-full bg-white shadow-[0px_10px_24px_0px_rgba(51,31,10,0.1)] grid place-items-center text-ink"
-        >
-          <PhotoIcon />
-        </button>
-      )}
-
       <div
         className={`flex-1 flex items-center border-[1.2px] ${
           large ? "h-[54px] rounded-[27px] pl-[26px] pr-4" : "h-11 rounded-[22px] pl-5 pr-3"
@@ -109,6 +102,7 @@ export function Composer({
           </div>
         ) : (
           <input
+            id={inputId}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={placeholder}

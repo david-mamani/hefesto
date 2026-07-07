@@ -45,6 +45,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -79,6 +80,21 @@ export default function LoginPage() {
       options: { redirectTo: `${location.origin}/auth/callback?next=/` },
     });
     if (authError) setError(authError.message);
+  }
+
+  async function handleForgot() {
+    setError(null);
+    setNotice(null);
+    if (!email.trim()) {
+      setError("Enter your e-mail first — then tap forgot.");
+      return;
+    }
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${location.origin}/auth/callback?next=/`,
+    });
+    if (authError) setError(authError.message);
+    else setNotice("Check your inbox — the link signs you back in.");
   }
 
   async function handleDemo() {
@@ -157,9 +173,13 @@ export default function LoginPage() {
                   className="flex-1 min-w-0 ml-3 bg-transparent text-[13px] text-ink placeholder:text-muted focus:outline-none"
                 />
                 {mode === "login" && (
-                  <span className="h-[30px] px-[14px] rounded-full bg-white text-[12px] font-medium text-[#1C1611] grid place-items-center">
+                  <button
+                    type="button"
+                    onClick={handleForgot}
+                    className="h-[30px] px-[14px] rounded-full bg-white text-[12px] font-medium text-[#1C1611] grid place-items-center"
+                  >
                     forgot
-                  </span>
+                  </button>
                 )}
               </label>
             </div>
@@ -183,6 +203,7 @@ export default function LoginPage() {
             </div>
 
             {error && <p className="mt-3 text-[12px] text-orange">{error}</p>}
+            {notice && <p className="mt-3 text-[12px] text-ink">{notice}</p>}
           </form>
 
           <p className="micro-label mt-7 text-[9px] tracking-[0.9px]">or continue with</p>

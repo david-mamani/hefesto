@@ -3,28 +3,20 @@ import { createClient } from "@/lib/supabase/server";
 import { RingAvatar } from "@/components/RingAvatar";
 import { HomeExperience } from "@/components/HomeExperience";
 import { getNetwork } from "@/lib/network";
-import { knowledgeLines } from "@/lib/person";
+import { knowledgeLines, compactGap } from "@/lib/person";
 
 export const dynamic = "force-dynamic";
-
-// Copy shown before the first capture exists — honest, no fabricated people.
-// Both cards go live (real featured person / real cold-contact nudge) below.
-const PLACEHOLDERS = {
-  greeting: "Tell me about someone you met — I'll remember them.",
-  meeting: {
-    time: "4:00",
-    when: "PM · today",
-    title: "Your first briefing",
-    note: "Capture someone — I'll prep you before you meet again",
-  },
-  suggestion: { text: "Capture your first person", cluster: "Start here" },
-};
 
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ capture?: string }>;
+}) {
+  const { capture } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,28 +27,34 @@ export default async function HomePage() {
   const initial = (displayName[0] ?? "H").toUpperCase();
 
   const network = user ? await getNetwork(user.id) : { people: [], nudge: null };
+
   // On-open nudge speaks through Hefesto's bubble (PRD §6.12) — the Suggested
-  // card below carries the same reconnection with its cluster chip.
-  const greeting = network.nudge ? network.nudge.message : PLACEHOLDERS.greeting;
+  // card carries the same reconnection and opens that person.
+  const greeting = network.nudge
+    ? network.nudge.message
+    : "Tell me about someone you met — I'll remember them.";
   const suggestion = network.nudge
     ? {
+        personId: network.nudge.personId,
         text: `Reconnect with ${network.nudge.name.split(/\s+/)[0]} — ${network.nudge.warmth.gap}`,
         cluster: titleCase(network.nudge.cluster ?? "personal"),
       }
-    : PLACEHOLDERS.suggestion;
+    : null;
 
-  // The "next meeting" card is the briefing entry point — feature the most recent
-  // person so tapping it opens their real, memory-grounded briefing.
-  const featured = network.people[0] ?? null;
-  const meeting = featured
+  // The briefing card features the most recent person — tapping it opens their
+  // real, memory-grounded briefing.
+  const featuredPerson = network.people[0] ?? null;
+  const featured = featuredPerson
     ? {
-        ...PLACEHOLDERS.meeting,
-        title: `Coffee with ${featured.name}`,
+        personId: featuredPerson.personId,
+        name: featuredPerson.name,
+        initial: featuredPerson.initial,
+        lastSeen: compactGap(featuredPerson.warmth.days),
         note:
-          knowledgeLines(featured, 2).join(" · ") ||
+          knowledgeLines(featuredPerson, 2).join(" · ") ||
           "You'll know more after the next capture",
       }
-    : PLACEHOLDERS.meeting;
+    : null;
 
   return (
     <main className="px-6">
@@ -68,8 +66,10 @@ export default async function HomePage() {
       </header>
 
       <HomeExperience
-        placeholders={{ ...PLACEHOLDERS, greeting, suggestion, meeting }}
-        featuredPersonId={featured?.personId ?? null}
+        greeting={greeting}
+        featured={featured}
+        suggestion={suggestion}
+        initialCapture={capture ? `${capture}: ` : undefined}
       />
     </main>
   );

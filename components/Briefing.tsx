@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Hefesto, type HefestoHandle } from "@/components/HefestoSprite";
 import { ChevronRightIcon } from "@/components/icons";
+import { DraftSheet } from "@/components/DraftSheet";
 import { applyMode, clusterToMode } from "@/lib/mascot";
 
 type BriefingData = {
@@ -31,6 +32,7 @@ const CLUSTER_LABEL: Record<string, string> = {
 export function Briefing({ personId, onClose }: { personId: string; onClose: () => void }) {
   const [data, setData] = useState<BriefingData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
   const hefesto = useRef<HefestoHandle>(null);
 
   useEffect(() => {
@@ -163,14 +165,14 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
             <div className="flex items-center gap-2 mt-auto pt-8">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => setDraftOpen(true)}
                 className="h-[54px] w-[190px] pl-7 rounded-full bg-ember text-cream text-[15px] font-medium text-left"
               >
                 Draft opener
               </button>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => setDraftOpen(true)}
                 aria-label="Draft opener"
                 className="size-[54px] rounded-full bg-ember grid place-items-center"
               >
@@ -187,6 +189,8 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
           </>
         )}
       </div>
+
+      {draftOpen && <DraftSheet personId={personId} onClose={() => setDraftOpen(false)} />}
     </div>
   );
 }

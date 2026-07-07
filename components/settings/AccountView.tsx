@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { RingAvatar } from "@/components/RingAvatar";
 import { Toggle } from "@/components/settings/Toggle";
+import { EditProfileModal } from "@/components/settings/EditProfileModal";
+import { PrivacySheet } from "@/components/settings/PrivacySheet";
 import { saveTheme, saveNudges, THEME_ORDER, type ThemePref } from "@/lib/theme";
 
 /*
@@ -31,12 +33,15 @@ function Row({
   value,
   onClick,
   href,
+  static: isStatic = false,
   last = false,
 }: {
   label: string;
   value?: string;
   onClick?: () => void;
   href?: string;
+  /** Informational row — no chevron, not clickable (e.g. Language). */
+  static?: boolean;
   last?: boolean;
 }) {
   const className = `w-full h-[60px] flex items-center px-[18px] text-left ${
@@ -49,10 +54,13 @@ function Row({
       <span className="text-[13.5px] font-medium text-ink">{label}</span>
       <span className="ml-auto flex items-center gap-4 pr-[7px]">
         {value && <span className="text-[11.5px] text-muted">{value}</span>}
-        <Chevron />
+        {!isStatic && <Chevron />}
       </span>
     </>
   );
+  if (isStatic) {
+    return <div className={className}>{body}</div>;
+  }
   if (href) {
     return (
       <Link href={href} className={className}>
@@ -82,17 +90,13 @@ export function AccountView({
 }) {
   const [theme, setTheme] = useState<ThemePref>(initialTheme);
   const [nudges, setNudges] = useState(initialNudges);
-  const [hint, setHint] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   function cycleTheme() {
     const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
     setTheme(next);
     saveTheme(next);
-  }
-
-  function stub() {
-    setHint(true);
-    setTimeout(() => setHint(false), 2600);
   }
 
   return (
@@ -112,20 +116,12 @@ export function AccountView({
       </div>
 
       <section className="glass rounded-[26px] mt-[32px] overflow-hidden">
-        <Row label="Edit profile" onClick={stub} />
+        <Row label="Edit profile" onClick={() => setEditOpen(true)} />
         <Row label="Connect Telegram" value={telegramLinked ? "Linked" : "Not linked"} href="/account/telegram" />
-        <Row label="Language" value="English" onClick={stub} />
-        <Row label="Privacy & data" onClick={stub} />
+        <Row label="Language" value="English" static />
+        <Row label="Privacy & data" onClick={() => setPrivacyOpen(true)} />
         <Row label="Appearance" value={PREF_LABEL[theme]} onClick={cycleTheme} last />
       </section>
-      <div className="relative h-0">
-        <p
-          className={`absolute top-[2px] left-1 text-[10.5px] text-muted transition-opacity ${hint ? "opacity-100" : "opacity-0"}`}
-          aria-hidden={!hint}
-        >
-          Coming soon.
-        </p>
-      </div>
 
       <section className="glass rounded-[24px] h-[58px] mt-4 flex items-center px-[18px]">
         <span className="text-[13.5px] font-medium text-ink">Proactive nudges</span>
@@ -149,6 +145,9 @@ export function AccountView({
           Log out
         </button>
       </form>
+
+      {editOpen && <EditProfileModal currentName={name} onClose={() => setEditOpen(false)} />}
+      {privacyOpen && <PrivacySheet onClose={() => setPrivacyOpen(false)} />}
     </main>
   );
 }

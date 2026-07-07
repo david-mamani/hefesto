@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { EmberGlow } from "@/components/EmberGlow";
+import { RingAvatar } from "@/components/RingAvatar";
 import { HefestoSprite, type HefestoHandle } from "@/components/HefestoSprite";
 import { SpeechBubble } from "@/components/SpeechBubble";
 import { ThoughtBubble } from "@/components/ThoughtBubble";
@@ -14,11 +16,17 @@ import { nudgesEnabled } from "@/lib/theme";
 import { ForgingCard } from "@/components/capture/ForgingCard";
 import type { ChatResponse } from "@/components/chat/ChatView";
 
-export type HomePlaceholders = {
-  greeting: string;
-  meeting: { time: string; when: string; title: string; note: string };
-  suggestion: { text: string; cluster: string };
+/** The most recent person — the briefing card opens their real briefing. */
+export type FeaturedCard = {
+  personId: string;
+  name: string;
+  initial: string;
+  lastSeen: string;
+  note: string;
 };
+
+/** The cold-contact nudge — the Suggested card opens that person. */
+export type SuggestionCard = { personId: string; text: string; cluster: string };
 
 // Questions go to recall, statements go to capture — the same convention the
 // Telegram bot follows.
@@ -34,12 +42,17 @@ type AskState =
   | { phase: "error"; message: string };
 
 export function HomeExperience({
-  placeholders,
-  featuredPersonId,
+  greeting,
+  featured,
+  suggestion,
+  initialCapture,
 }: {
-  placeholders: HomePlaceholders;
-  featuredPersonId?: string | null;
+  greeting: string;
+  featured: FeaturedCard | null;
+  suggestion: SuggestionCard | null;
+  initialCapture?: string;
 }) {
+  const router = useRouter();
   const capture = useCapture();
   const { state } = capture;
   const [briefingOpen, setBriefingOpen] = useState(false);
@@ -111,6 +124,10 @@ export function HomeExperience({
     }
   }
 
+  function focusComposer() {
+    document.getElementById("home-composer")?.focus();
+  }
+
   function handleSend(text: string) {
     if (isQuestion(text)) {
       void askHefesto(text);
@@ -138,7 +155,7 @@ export function HomeExperience({
               ? ask.message
               : ask.phase === "answered"
                 ? clip(ask.data.text)
-                : placeholders.greeting;
+                : greeting;
 
   // M14 summary line: "Carlos · fintech founder · wants a designer intro"
   const forgingSummary =
@@ -156,38 +173,51 @@ export function HomeExperience({
     <>
       {!forging && (
         <>
-          <p className="micro-label mt-6 text-[10px] tracking-[1px]">Next meeting</p>
+          <p className="micro-label mt-6 text-[10px] tracking-[1px]">Briefing</p>
 
-          <section className="relative overflow-hidden h-[150px] rounded-[26px] bg-surface-soft shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] mt-[6px]">
+          {/* Featured = the most recent person; the whole card opens their real
+              briefing. Before the first capture it invites one instead. */}
+          <section
+            role="button"
+            tabIndex={0}
+            aria-label={featured ? `Open ${featured.name}'s briefing` : "Capture your first person"}
+            onClick={() => (featured ? setBriefingOpen(true) : focusComposer())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") featured ? setBriefingOpen(true) : focusComposer();
+            }}
+            className="relative overflow-hidden h-[150px] rounded-[26px] bg-surface-soft shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] mt-[6px] cursor-pointer text-left"
+          >
             <EmberGlow className="w-[220px] h-[90px] right-[-98px] bottom-0" />
 
             <div className="absolute left-[14px] top-[14px] w-[118px] h-[122px] glass rounded-[20px]">
-              <p className="font-light text-[26px] text-ink absolute left-[12px] top-[8px]">
-                {placeholders.meeting.time}
-              </p>
-              <p className="text-[11px] text-muted absolute left-[12px] top-[42px]">
-                {placeholders.meeting.when}
-              </p>
+              {featured ? (
+                <>
+                  <RingAvatar initial={featured.initial} size={52} className="absolute left-[12px] top-[10px]" />
+                  <p className="text-[11px] text-muted absolute left-[12px] top-[70px]">
+                    last seen {featured.lastSeen}
+                  </p>
+                </>
+              ) : (
+                <p className="font-light text-[34px] text-ink absolute left-[14px] top-[14px]">+</p>
+              )}
               <p className="micro-label text-[9px] tracking-[0.9px] absolute left-[12px] bottom-[12px]">
                 Briefing
               </p>
             </div>
 
             <p className="absolute left-[148px] top-[26px] w-[122px] font-semibold text-[15px] text-ink leading-normal">
-              {placeholders.meeting.title}
+              {featured ? featured.name : "Your first briefing"}
             </p>
             <p className="absolute left-[148px] top-[76px] w-[120px] text-[11.5px] text-muted leading-normal">
-              {placeholders.meeting.note}
+              {featured ? featured.note : "Capture someone — I'll prep you before you meet again"}
             </p>
 
-            <button
-              type="button"
-              aria-label="Open briefing"
-              onClick={() => featuredPersonId && setBriefingOpen(true)}
+            <span
+              aria-hidden="true"
               className="absolute right-[14px] bottom-[16px] size-10 rounded-full bg-ember grid place-items-center"
             >
               <ChevronRightIcon color="#F6F1E8" />
-            </button>
+            </span>
           </section>
         </>
       )}
@@ -212,12 +242,26 @@ export function HomeExperience({
         <>
           <p className="micro-label -mt-3 text-[10px] tracking-[1px]">Suggested</p>
 
-          <section className="relative h-[74px] glass rounded-[22px] mt-[5px]">
+          {/* The live cold-contact nudge — tapping opens that person. Before the
+              first capture it points at the composer instead. */}
+          <section
+            role="button"
+            tabIndex={0}
+            aria-label={suggestion ? suggestion.text : "Capture your first person"}
+            onClick={() =>
+              suggestion ? router.push(`/people/${suggestion.personId}`) : focusComposer()
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter")
+                suggestion ? router.push(`/people/${suggestion.personId}`) : focusComposer();
+            }}
+            className="relative h-[74px] glass rounded-[22px] mt-[5px] cursor-pointer"
+          >
             <p className="absolute left-[18px] top-[10px] font-medium text-[13px] text-ink">
-              {placeholders.suggestion.text}
+              {suggestion ? suggestion.text : "Capture your first person"}
             </p>
             <span className="absolute left-[18px] top-[34px] h-[30px] px-[14px] rounded-full bg-white text-[12px] font-medium text-[#1C1611] grid place-items-center">
-              {placeholders.suggestion.cluster}
+              {suggestion ? suggestion.cluster : "Start here"}
             </span>
             <span className="absolute right-[24px] top-[24px] text-ink">
               <ChevronRightIcon color="#1C1611" />
@@ -228,6 +272,8 @@ export function HomeExperience({
 
       <div className="mt-[26px] -mx-2">
         <Composer
+          inputId="home-composer"
+          initialText={initialCapture}
           onSend={handleSend}
           onVoice={(audio, seconds) => capture.startVoice(audio, seconds)}
           onRecordingChange={setRecording}
@@ -236,6 +282,10 @@ export function HomeExperience({
           }
         />
       </div>
+
+      {briefingOpen && featured && (
+        <Briefing personId={featured.personId} onClose={() => setBriefingOpen(false)} />
+      )}
 
       {state.phase === "review" && capture.fields && (
         <ReviewCapture

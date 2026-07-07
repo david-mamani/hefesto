@@ -14,6 +14,7 @@ import {
 import { RingAvatar } from "@/components/RingAvatar";
 import { Briefing } from "@/components/Briefing";
 import { ForgetModal } from "@/components/ForgetModal";
+import { DraftSheet } from "@/components/DraftSheet";
 import { ChevronRightIcon } from "@/components/icons";
 import { SearchIcon } from "@/components/icons-desktop";
 import { applyMode, clusterToMode } from "@/lib/mascot";
@@ -52,7 +53,7 @@ export function DesktopPeople({
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [forgetOpen, setForgetOpen] = useState(false);
   const [forgetBusy, setForgetBusy] = useState(false);
-  const [draftHint, setDraftHint] = useState(false);
+  const [draftOpen, setDraftOpen] = useState(false);
 
   // The selected person's cluster tints the panel accents (PRD §11).
   useEffect(() => {
@@ -72,11 +73,6 @@ export function DesktopPeople({
   const coolingDown = people.filter((p) => p.warmth.band !== "warm").length;
   const person = detail?.person ?? null;
   const timeline = detail?.timeline.slice(-3) ?? [];
-
-  function stubDraft() {
-    setDraftHint(true);
-    setTimeout(() => setDraftHint(false), 2600);
-  }
 
   async function confirmForget() {
     if (!person) return;
@@ -258,14 +254,14 @@ export function DesktopPeople({
             <div className="flex items-center gap-3 mt-[30px]">
               <button
                 type="button"
-                onClick={stubDraft}
+                onClick={() => setDraftOpen(true)}
                 className="h-[54px] px-[28px] rounded-[27px] bg-ember text-cream text-[15px] font-medium"
               >
                 Draft message
               </button>
               <button
                 type="button"
-                onClick={stubDraft}
+                onClick={() => setDraftOpen(true)}
                 aria-label="Draft message"
                 className="size-[54px] rounded-full bg-ember grid place-items-center"
               >
@@ -287,10 +283,8 @@ export function DesktopPeople({
               </button>
             </div>
 
-            {draftHint && (
-              <p className="text-[11px] text-muted mt-[12px]">
-                Message drafting arrives with briefings — soon.
-              </p>
+            {draftOpen && (
+              <DraftSheet personId={person.personId} onClose={() => setDraftOpen(false)} />
             )}
           </aside>
         )}

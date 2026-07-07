@@ -9,6 +9,7 @@ import { applyMode, clusterToMode } from "@/lib/mascot";
 import { RingAvatar } from "@/components/RingAvatar";
 import { Briefing } from "@/components/Briefing";
 import { ForgetModal } from "@/components/ForgetModal";
+import { DraftSheet } from "@/components/DraftSheet";
 import { ChevronRightIcon } from "@/components/icons";
 
 /*
@@ -28,7 +29,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
   const [briefingOpen, setBriefingOpen] = useState(false);
   const [forgetOpen, setForgetOpen] = useState(false);
   const [forgetBusy, setForgetBusy] = useState(false);
-  const [draftHint, setDraftHint] = useState(false);
+  const [draftOpen, setDraftOpen] = useState(false);
 
   const knowledge = knowledgeLines(person);
   const recentTimeline = timeline.slice(-4);
@@ -39,11 +40,6 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
     applyMode(clusterToMode(person.cluster));
     return () => applyMode("personal");
   }, [person.cluster]);
-
-  function stubDraft() {
-    setDraftHint(true);
-    setTimeout(() => setDraftHint(false), 2600);
-  }
 
   async function confirmForget() {
     setForgetBusy(true);
@@ -147,7 +143,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
       <div className="flex items-center gap-2 mt-[24px]">
         <button
           type="button"
-          onClick={stubDraft}
+          onClick={() => setDraftOpen(true)}
           className="flex-1 h-[54px] px-[28px] rounded-[27px] bg-ember text-cream text-[15px] font-medium whitespace-nowrap text-left"
         >
           Draft message
@@ -161,18 +157,14 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
           <ChevronRightIcon color="#F6F1E8" />
         </button>
         <Link
-          href="/"
+          href={`/?capture=${encodeURIComponent(person.name)}`}
           className="h-[54px] w-[88px] rounded-[27px] bg-white text-[12.5px] font-medium text-[#1C1611] grid place-items-center ml-3 shrink-0 whitespace-nowrap"
         >
           Log update
         </Link>
       </div>
 
-      {draftHint && (
-        <p className="text-[11px] text-muted mt-[10px]">
-          Message drafting arrives with briefings — soon.
-        </p>
-      )}
+      {draftOpen && <DraftSheet personId={person.personId} onClose={() => setDraftOpen(false)} />}
 
       <button
         type="button"

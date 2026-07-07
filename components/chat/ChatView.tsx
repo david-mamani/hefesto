@@ -305,7 +305,6 @@ export function ChatView({
             else h.stop();
           }}
           disabled={sending}
-          photo={Boolean(headerInitial)}
           large={!headerInitial}
         />
       </div>
