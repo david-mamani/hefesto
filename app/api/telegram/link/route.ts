@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { botUsername, deepLink } from "@/lib/telegram";
+import { resolveBotUsername, deepLink } from "@/lib/telegram";
 
 /*
  * Connect Telegram (PRD §9.1). POST mints a one-time token (only its SHA-256
@@ -37,7 +37,7 @@ export async function POST() {
     });
     if (error) throw new Error("Could not create the link token");
 
-    const url = deepLink(token);
+    const url = await deepLink(token);
     // Ink modules on a transparent back — the card behind provides the paper.
     const qrDataUrl = await QRCode.toDataURL(url, {
       errorCorrectionLevel: "M",
@@ -49,7 +49,7 @@ export async function POST() {
     return NextResponse.json({
       url,
       qrDataUrl,
-      botUsername: botUsername(),
+      botUsername: await resolveBotUsername(),
       expiresAt,
     });
   } catch (error) {
@@ -73,12 +73,7 @@ export async function GET() {
     .select("telegram_chat_id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  let username: string | null = null;
-  try {
-    username = botUsername();
-  } catch {
-    username = null;
-  }
+  const username = await resolveBotUsername().catch(() => null);
   return NextResponse.json({ linked: (count ?? 0) > 0, botUsername: username });
 }
 

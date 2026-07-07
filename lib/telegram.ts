@@ -11,22 +11,35 @@ function token(): string {
   return t;
 }
 
-/** Bare bot username — tolerates "@name", "t.me/name" and full-URL forms in the env var. */
-export function botUsername(): string {
-  const raw = process.env.TELEGRAM_BOT_USERNAME ?? "";
-  const bare = raw
+/** Strip "@name", "t.me/name" and full-URL forms down to the bare username. */
+function bareUsername(raw: string): string {
+  return raw
     .replace(/^https?:\/\//i, "")
     .replace(/^(www\.)?t(elegram)?\.me\//i, "")
     .replace(/^@/, "")
     .replace(/\/+$/, "")
     .trim();
-  if (!bare) throw new Error("TELEGRAM_BOT_USERNAME is not set");
-  return bare;
+}
+
+let discoveredUsername: string | null = null;
+
+/**
+ * The bot's username: TELEGRAM_BOT_USERNAME when set (any form), otherwise
+ * self-discovered from the token via getMe — one env var less to misconfigure.
+ */
+export async function resolveBotUsername(): Promise<string> {
+  const fromEnv = bareUsername(process.env.TELEGRAM_BOT_USERNAME ?? "");
+  if (fromEnv) return fromEnv;
+  if (discoveredUsername) return discoveredUsername;
+  const me = await call<{ username?: string }>("getMe", {});
+  if (!me.username) throw new Error("The bot reports no username");
+  discoveredUsername = me.username;
+  return me.username;
 }
 
 /** One-tap link that opens the bot with `/start <token>` prefilled. */
-export function deepLink(startToken: string): string {
-  return `https://t.me/${botUsername()}?start=${startToken}`;
+export async function deepLink(startToken: string): Promise<string> {
+  return `https://t.me/${await resolveBotUsername()}?start=${startToken}`;
 }
 
 async function call<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
