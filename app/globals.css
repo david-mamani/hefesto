@@ -100,13 +100,16 @@ body {
   box-shadow: var(--shadow-dark);
 }
 
-/* Micro label — tracked uppercase Poppins Medium */
-.micro-label {
-  font-weight: 500;
-  font-size: 10px;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--muted);
+/* Micro label — tracked uppercase Poppins Medium. Lives in the components
+   layer so per-use utility overrides (text-[9px], tracking-[0.9px]…) win. */
+@layer components {
+  .micro-label {
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
 }
 
 /* Graph "bloom": embers scale + fade in, spokes draw after, sheet slides up. */

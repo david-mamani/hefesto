@@ -99,7 +99,7 @@ export function ReviewCapture({
 
   return (
     <div className="fixed inset-0 z-50 bg-bg overflow-y-auto">
-      <div className="w-full max-w-[390px] mx-auto px-6 pb-10 min-h-full flex flex-col">
+      <div className="w-full max-w-[390px] mx-auto px-6 pb-[90px] min-h-full flex flex-col">
         <button
           type="button"
           onClick={onDiscard}
@@ -184,7 +184,10 @@ export function ReviewCapture({
             <p className="text-[13.5px] font-medium text-ink">Looks like a new person</p>
             <p className="text-[11.5px] text-muted mt-1">
               Save as new, or same as {candidates[0].canonicalName}
-              {candidates[0].cluster ? ` (${CLUSTER_LABEL[candidates[0].cluster as ConfirmedFields["cluster"]] ?? candidates[0].cluster})` : ""}?
+              {candidates[0].cluster
+                ? ` (${candidates[0].cluster[0].toUpperCase()}${candidates[0].cluster.slice(1)})`
+                : ""}
+              ?
             </p>
             <div className="flex gap-2 mt-3 flex-wrap">
               <button

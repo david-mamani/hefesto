@@ -40,8 +40,9 @@ export function DesktopChat({ initialQuestion }: { initialQuestion?: string }) {
       </div>
 
       <div className="relative shrink-0">
-        <HefestoSprite ref={hefesto} scale={2} className="absolute right-0 -top-5" ambient />
-        <div className="pt-[52px]">
+        {/* M10d: the cat's lower half overlaps the rail's top edge, inset from the right */}
+        <HefestoSprite ref={hefesto} scale={2} className="absolute right-4 -top-5 z-10" ambient />
+        <div className="pt-[20px]">
           <ThinkingRail
             path={path && path.length > 0 ? path : undefined}
             hops={path?.length}

@@ -16,7 +16,7 @@ export function MobileDock() {
   const clean = pathname.replace(/^\/(m|d)(?=\/|$)/, "") || "/";
 
   return (
-    <nav className="fixed bottom-[18px] left-1/2 -translate-x-1/2 w-[330px] h-[68px] glass rounded-[34px] grid grid-cols-4 items-center px-2 z-40">
+    <nav className="fixed bottom-[18px] left-1/2 -translate-x-1/2 w-[330px] h-[68px] glass rounded-[34px] flex items-center justify-between px-[26px] z-40">
       {ITEMS.map(({ label, href, Icon, enabled }) => {
         const active = clean === href || (href !== "/" && clean.startsWith(`${href}/`));
         const tone = active ? "var(--orange)" : "rgba(28,22,17,0.45)";

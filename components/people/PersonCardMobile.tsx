@@ -96,7 +96,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
         }}
       >
         <p className="text-[10px] font-medium tracking-[1px] text-white pt-[14px]">AFFINITY</p>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-[28px]">
           <p className="font-light text-[40px] text-white leading-tight">{person.warmth.score}</p>
           <p className="text-[12px] text-white">{affinityCaption(person.warmth.band)}</p>
           <span className="relative ml-auto h-[5px] w-[120px] rounded-[2.5px] bg-white/35">
@@ -148,7 +148,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
         <button
           type="button"
           onClick={stubDraft}
-          className="h-[54px] px-[22px] rounded-[27px] bg-ember text-cream text-[14px] font-medium whitespace-nowrap"
+          className="flex-1 h-[54px] px-[28px] rounded-[27px] bg-ember text-cream text-[15px] font-medium whitespace-nowrap text-left"
         >
           Draft message
         </button>
@@ -162,7 +162,7 @@ export function PersonCardMobile({ detail }: { detail: PersonDetail }) {
         </button>
         <Link
           href="/"
-          className="h-[54px] px-[16px] rounded-[27px] bg-white text-[12.5px] font-medium text-[#1C1611] grid place-items-center ml-auto whitespace-nowrap"
+          className="h-[54px] w-[88px] rounded-[27px] bg-white text-[12.5px] font-medium text-[#1C1611] grid place-items-center ml-3 shrink-0 whitespace-nowrap"
         >
           Log update
         </Link>

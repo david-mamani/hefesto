@@ -140,9 +140,16 @@ export function HomeExperience({
                 ? clip(ask.data.text)
                 : placeholders.greeting;
 
+  // M14 summary line: "Carlos · fintech founder · wants a designer intro"
   const forgingSummary =
     state.phase === "forging" || state.phase === "done"
-      ? state.canonicalName
+      ? [
+          state.canonicalName,
+          capture.fields?.role ?? capture.fields?.company,
+          capture.fields?.commitments[0],
+        ]
+          .filter(Boolean)
+          .join(" · ")
       : "";
 
   return (
@@ -152,7 +159,7 @@ export function HomeExperience({
           <p className="micro-label mt-6 text-[10px] tracking-[1px]">Next meeting</p>
 
           <section className="relative overflow-hidden h-[150px] rounded-[26px] bg-surface-soft shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] mt-[6px]">
-            <EmberGlow className="w-[220px] h-[90px] right-[-49px] bottom-[-30px]" />
+            <EmberGlow className="w-[220px] h-[90px] right-[-98px] bottom-0" />
 
             <div className="absolute left-[14px] top-[14px] w-[118px] h-[122px] glass rounded-[20px]">
               <p className="font-light text-[26px] text-ink absolute left-[12px] top-[8px]">
@@ -189,11 +196,11 @@ export function HomeExperience({
         {thought ? (
           <ThoughtBubble path={thought.path} caption={clip(thought.text, 110)} />
         ) : (
-          <SpeechBubble>{bubbleText}</SpeechBubble>
+          <SpeechBubble loading={state.phase === "forging"}>{bubbleText}</SpeechBubble>
         )}
       </div>
 
-      <div className={`flex justify-center ${thought ? "mt-[20px]" : "-mt-[7px]"}`}>
+      <div className={`flex justify-center ${thought ? "mt-[20px]" : "mt-[4px]"}`}>
         <HefestoSprite ref={hefesto} scale={6} ambient />
       </div>
 
@@ -212,14 +219,14 @@ export function HomeExperience({
             <span className="absolute left-[18px] top-[34px] h-[30px] px-[14px] rounded-full bg-white text-[12px] font-medium text-[#1C1611] grid place-items-center">
               {placeholders.suggestion.cluster}
             </span>
-            <span className="absolute right-[24px] top-1/2 -translate-y-1/2 text-ink">
+            <span className="absolute right-[24px] top-[24px] text-ink">
               <ChevronRightIcon color="#1C1611" />
             </span>
           </section>
         </>
       )}
 
-      <div className="mt-[26px]">
+      <div className="mt-[26px] -mx-2">
         <Composer
           onSend={handleSend}
           onVoice={(audio, seconds) => capture.startVoice(audio, seconds)}

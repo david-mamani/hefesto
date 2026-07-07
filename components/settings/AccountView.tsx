@@ -40,12 +40,14 @@ function Row({
   last?: boolean;
 }) {
   const className = `w-full h-[60px] flex items-center px-[18px] text-left ${
-    last ? "" : "border-b border-[rgba(28,22,17,0.08)]"
+    last
+      ? ""
+      : "relative after:absolute after:bottom-0 after:left-[18px] after:right-[21px] after:h-px after:bg-[rgba(28,22,17,0.08)]"
   }`;
   const body = (
     <>
       <span className="text-[13.5px] font-medium text-ink">{label}</span>
-      <span className="ml-auto flex items-center gap-4">
+      <span className="ml-auto flex items-center gap-4 pr-[7px]">
         {value && <span className="text-[11.5px] text-muted">{value}</span>}
         <Chevron />
       </span>
@@ -116,14 +118,16 @@ export function AccountView({
         <Row label="Privacy & data" onClick={stub} />
         <Row label="Appearance" value={PREF_LABEL[theme]} onClick={cycleTheme} last />
       </section>
-      <p
-        className={`text-[10.5px] text-muted mt-2 ml-1 transition-opacity ${hint ? "opacity-100" : "opacity-0"}`}
-        aria-hidden={!hint}
-      >
-        Coming soon.
-      </p>
+      <div className="relative h-0">
+        <p
+          className={`absolute top-[2px] left-1 text-[10.5px] text-muted transition-opacity ${hint ? "opacity-100" : "opacity-0"}`}
+          aria-hidden={!hint}
+        >
+          Coming soon.
+        </p>
+      </div>
 
-      <section className="glass rounded-[24px] h-[58px] mt-2 flex items-center px-[18px]">
+      <section className="glass rounded-[24px] h-[58px] mt-4 flex items-center px-[18px]">
         <span className="text-[13.5px] font-medium text-ink">Proactive nudges</span>
         <span className="ml-auto">
           <Toggle

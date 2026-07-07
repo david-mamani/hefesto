@@ -48,7 +48,13 @@ export function CaptureModal({ open, onClose }: { open: boolean; onClose: () => 
         {state.phase === "forging" || state.phase === "done" ? (
           <div className="bg-bg rounded-[28px] p-6 shadow-[0px_16px_38px_0px_rgba(51,31,10,0.22)]">
             <ForgingCard
-              summary={state.canonicalName}
+              summary={[
+                state.canonicalName,
+                capture.fields?.role ?? capture.fields?.company,
+                capture.fields?.commitments[0],
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               done={state.phase === "done"}
             />
           </div>

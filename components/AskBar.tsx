@@ -19,7 +19,7 @@ export function AskBar() {
   return (
     <form
       onSubmit={submit}
-      className="glass rounded-[27px] h-[54px] max-w-[700px] mt-9 flex items-center pl-5 pr-2 gap-3"
+      className="glass rounded-[27px] h-[54px] max-w-[700px] mt-4 flex items-center pl-5 pr-2 gap-3"
     >
       <SearchIcon color="var(--ink)" />
       <input

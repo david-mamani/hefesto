@@ -115,7 +115,7 @@ export function DesktopPeople({
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-[8px]">
+        <div className="ml-[30px] flex items-center gap-[8px]">
           {FILTERS.map((f) => {
             const active = filter === f;
             return (
@@ -134,7 +134,7 @@ export function DesktopPeople({
         </div>
       </div>
 
-      <div className="flex gap-5 mt-[24px] items-start">
+      <div className="flex gap-10 mt-[24px] items-start">
         {/* master list */}
         <div className="flex flex-col gap-3 w-[480px] shrink-0">
           {visible.length === 0 && (
@@ -193,7 +193,7 @@ export function DesktopPeople({
                 </p>
                 <p className="text-[13px] text-muted mt-[4px]">{personTitle(person)}</p>
               </div>
-              <span className="ml-auto inline-grid place-items-center h-[34px] px-[18px] rounded-[17px] bg-white/55 border border-white/90 text-[12.5px] font-medium text-ink capitalize mt-[6px]">
+              <span className="ml-[40px] shrink-0 inline-grid place-items-center h-[34px] px-[18px] rounded-[17px] bg-white/55 border border-white/90 text-[12.5px] font-medium text-ink capitalize mt-[6px]">
                 {person.cluster ?? "personal"}
               </span>
             </div>

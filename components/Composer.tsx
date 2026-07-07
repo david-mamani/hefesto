@@ -15,12 +15,18 @@ export function Composer({
   onVoice,
   onRecordingChange,
   disabled = false,
+  photo = true,
+  large = false,
 }: {
   placeholder?: string;
   onSend?: (text: string) => void | Promise<void>;
   onVoice?: (audio: Blob, seconds: number) => void | Promise<void>;
   onRecordingChange?: (recording: boolean) => void;
   disabled?: boolean;
+  /** M10d's desktop chat composer has no photo button. */
+  photo?: boolean;
+  /** M10d: 54px input pill + 54px send circle (mobile stays 44px). */
+  large?: boolean;
 }) {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
@@ -81,18 +87,20 @@ export function Composer({
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
-      <button
-        type="button"
-        aria-label="Add a photo"
-        className="size-11 shrink-0 rounded-full bg-white shadow-[0px_10px_24px_0px_rgba(51,31,10,0.1)] grid place-items-center text-ink"
-      >
-        <PhotoIcon />
-      </button>
+      {photo && (
+        <button
+          type="button"
+          aria-label="Add a photo"
+          className="size-11 shrink-0 rounded-full bg-white shadow-[0px_10px_24px_0px_rgba(51,31,10,0.1)] grid place-items-center text-ink"
+        >
+          <PhotoIcon />
+        </button>
+      )}
 
       <div
-        className={`flex-1 h-11 rounded-[22px] flex items-center pl-5 pr-3 border-[1.2px] ${
-          recording ? "bg-white/80 border-orange" : "bg-white/60 border-white/90"
-        }`}
+        className={`flex-1 flex items-center border-[1.2px] ${
+          large ? "h-[54px] rounded-[27px] pl-[26px] pr-4" : "h-11 rounded-[22px] pl-5 pr-3"
+        } ${recording ? "bg-white/80 border-orange" : "bg-white/60 border-white/90"}`}
       >
         {recording ? (
           <div className="flex-1 flex items-center gap-2">
@@ -105,7 +113,9 @@ export function Composer({
             onChange={(e) => setText(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
-            className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+            className={`flex-1 min-w-0 bg-transparent ${
+              large ? "text-[13px]" : "text-[12.5px]"
+            } text-ink placeholder:text-muted focus:outline-none disabled:opacity-60`}
           />
         )}
         {onVoice && (
@@ -127,7 +137,7 @@ export function Composer({
       <button
         type="submit"
         aria-label="Send"
-        className="size-11 shrink-0 rounded-full bg-ember grid place-items-center"
+        className={`${large ? "size-[54px]" : "size-11"} shrink-0 rounded-full bg-ember grid place-items-center`}
       >
         <ArrowUpIcon color="#F6F1E8" />
       </button>

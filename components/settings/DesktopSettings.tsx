@@ -30,15 +30,15 @@ function Chevron() {
 // takes its place once the /start handshake lands.
 function QrBlock({ linked, qrDataUrl }: { linked: boolean; qrDataUrl: string | null }) {
   return (
-    <div className="size-[118px] rounded-[10px] bg-cream shrink-0 flex items-center justify-center overflow-hidden">
+    <div className="size-[150px] rounded-[18px] bg-surface-soft shadow-[0px_16px_38px_0px_rgba(51,31,10,0.08)] shrink-0 flex items-center justify-center overflow-hidden">
       {linked ? (
-        <svg width="40" height="40" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" aria-hidden="true">
           <circle cx="22" cy="22" r="21" stroke="#3FB57F" strokeWidth="2" />
           <path d="M13 22.5L19.5 29L31 16" stroke="#3FB57F" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : qrDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- data URL, no optimizer pass
-        <img src={qrDataUrl} alt="Scan to open the bot" className="size-[104px] [image-rendering:pixelated]" />
+        <img src={qrDataUrl} alt="Scan to open the bot" className="size-[130px] [image-rendering:pixelated]" />
       ) : (
         <p className="text-[10px] text-muted">…</p>
       )}
@@ -78,21 +78,21 @@ export function DesktopSettings({
       <h1 className="font-semibold text-[28px] text-ink">Settings</h1>
       <p className="text-[13px] text-muted mt-1">account · connections · privacy</p>
 
-      <div className="flex gap-8 items-start mt-8">
+      <div className="flex gap-[30px] items-start mt-8">
         {/* Left column — profile, preferences, log out */}
-        <div className="w-[480px] shrink-0 flex flex-col gap-6">
-          <section className="glass rounded-[26px] px-7 pt-7 pb-6">
+        <div className="w-[520px] shrink-0 flex flex-col gap-6">
+          <section className="glass rounded-[28px] px-7 pt-7 pb-6">
             <div className="flex items-center gap-6">
               <RingAvatar initial={(name[0] ?? "H").toUpperCase()} size={72} />
               <div className="min-w-0">
-                <p className="font-semibold text-[22px] text-ink truncate">{name}</p>
+                <p className="font-semibold text-[20px] text-ink truncate">{name}</p>
                 <p className="text-[12px] text-muted truncate mt-[2px]">
                   {email} · {accountLabel}
                 </p>
                 <button
                   type="button"
                   onClick={stub}
-                  className="mt-3 h-[34px] px-5 rounded-[17px] bg-white text-[12.5px] font-medium text-[#1C1611]"
+                  className="mt-3 h-[30px] px-5 rounded-[15px] bg-white text-[12px] font-medium text-[#1C1611]"
                 >
                   Edit profile
                 </button>
@@ -101,7 +101,7 @@ export function DesktopSettings({
             <p className="micro-label text-[9px] tracking-[0.9px] mt-5">Member since {memberSince}</p>
           </section>
 
-          <section className="glass rounded-[26px] px-7 py-5">
+          <section className="glass rounded-[28px] px-7 py-5">
             <p className="micro-label text-[10px] tracking-[1px]">Preferences</p>
 
             <div className="flex items-center h-[56px] border-b border-[rgba(28,22,17,0.08)]">
@@ -157,7 +157,7 @@ export function DesktopSettings({
           <form action="/auth/signout" method="post">
             <button
               type="submit"
-              className="h-[46px] px-9 rounded-[23px] bg-white text-[13px] font-medium text-[#1C1611]"
+              className="w-[160px] h-12 rounded-[24px] bg-white text-[13px] font-medium text-[#1C1611]"
             >
               Log out
             </button>
@@ -172,7 +172,7 @@ export function DesktopSettings({
 
         {/* Right column — connections + privacy */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
-          <section className="glass rounded-[26px] px-7 py-6">
+          <section className="glass rounded-[28px] px-7 py-6">
             <h2 className="font-semibold text-[18px] text-ink">Connect Telegram</h2>
             <div className="flex gap-7 items-start mt-2">
               <div className="min-w-0 flex-1">
@@ -196,12 +196,11 @@ export function DesktopSettings({
                     href={tg.url ?? "#"}
                     target="_blank"
                     rel="noreferrer"
-                    className={`mt-3 h-[46px] px-6 rounded-[23px] inline-flex items-center gap-3 text-[13px] font-medium text-cream ${
+                    className={`glass-dark mt-3 h-[56px] px-6 rounded-[20px] inline-flex items-center gap-3 text-[13px] font-medium text-cream ${
                       tg.url ? "" : "pointer-events-none opacity-60"
                     }`}
-                    style={{ background: "rgba(83,72,63,0.92)" }}
                   >
-                    <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+                    <svg width="20" height="18" viewBox="0 0 16 14" fill="none" aria-hidden="true">
                       <path d="M15 1L1 6.2L5.4 8L11.5 3.6L7.3 8.8L12.8 13L15 1Z" stroke="#F6F1E8" strokeWidth="1.3" strokeLinejoin="round" />
                     </svg>
                     {tg.botUsername ? `@${tg.botUsername}` : "@…"}
@@ -215,7 +214,7 @@ export function DesktopSettings({
             </div>
           </section>
 
-          <section className="glass rounded-[26px] px-7 py-6">
+          <section className="glass rounded-[28px] px-7 py-6">
             <h2 className="font-semibold text-[18px] text-ink">Privacy &amp; data</h2>
             <p className="text-[12.5px] text-muted leading-relaxed mt-2 max-w-[420px]">
               Your memories are yours. Capture is always intentional and you can erase anything — or
@@ -235,7 +234,7 @@ export function DesktopSettings({
               <button
                 type="button"
                 onClick={stub}
-                className="h-[46px] px-6 rounded-[23px] bg-ember text-cream text-[13px] font-medium shrink-0"
+                className="w-[190px] h-[46px] rounded-[23px] bg-ember text-cream text-[13px] font-medium shrink-0"
               >
                 Forget everything
               </button>

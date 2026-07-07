@@ -110,8 +110,9 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
               }}
             >
               <p className="font-semibold text-[16px] pt-[14px]">Reconnect with {first}</p>
-              <p className="text-[12px] opacity-95 mt-[4px] capitalize">
-                {data.cluster ?? "personal"} · last seen {data.gap}
+              <p className="text-[12px] opacity-95 mt-[4px]">
+                <span className="capitalize">{data.cluster ?? "personal"}</span> · last seen{" "}
+                {data.gap}
               </p>
               <svg
                 className="absolute right-5 top-5"
@@ -125,14 +126,14 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
               </svg>
             </section>
 
-            <p className="micro-label mt-6 text-[10px] tracking-[1px]">Summary</p>
+            <p className="micro-label mt-5 text-[10px] tracking-[1px]">Summary</p>
             <section className="glass rounded-[24px] mt-2 px-[18px] py-[14px]">
               <p className="text-[12.5px] text-ink leading-relaxed">{data.summary}</p>
             </section>
 
             {data.keyPoints.length > 0 && (
               <>
-                <p className="micro-label mt-6 text-[10px] tracking-[1px]">Key points</p>
+                <p className="micro-label mt-5 text-[10px] tracking-[1px]">Key points</p>
                 <section className="glass rounded-[24px] mt-2 px-[18px] py-[13px] flex flex-col gap-[11px]">
                   {data.keyPoints.map((point, i) => (
                     <div key={i} className="flex gap-[11px]">
@@ -149,7 +150,7 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
 
             <div className="flex items-center gap-[14px] mt-6">
               <Hefesto ref={hefesto} scale={2} ambient />
-              <span className="relative glass rounded-[18px] h-[44px] px-[13px] grid place-items-center">
+              <span className="relative glass rounded-[18px] h-[44px] w-[186px] px-[13px] grid items-center justify-items-start">
                 <span
                   className="absolute -left-[6px] top-1/2 -translate-y-1/2 size-[10px] rotate-45"
                   style={{ background: "var(--glass-bg)", borderLeft: "1.5px solid var(--glass-border)", borderBottom: "1.5px solid var(--glass-border)" }}
@@ -163,7 +164,7 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
               <button
                 type="button"
                 onClick={onClose}
-                className="h-[54px] px-7 rounded-full bg-ember text-cream text-[15px] font-medium"
+                className="h-[54px] w-[190px] pl-7 rounded-full bg-ember text-cream text-[15px] font-medium text-left"
               >
                 Draft opener
               </button>
@@ -178,7 +179,7 @@ export function Briefing({ personId, onClose }: { personId: string; onClose: () 
               <button
                 type="button"
                 onClick={onClose}
-                className="h-[54px] w-[78px] rounded-full bg-white text-[12.5px] font-medium text-[#1C1611] ml-auto grid place-items-center"
+                className="h-[54px] w-[78px] rounded-full bg-white text-[12.5px] font-medium text-[#1C1611] ml-1 shrink-0 grid place-items-center"
               >
                 Later
               </button>

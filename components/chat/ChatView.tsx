@@ -165,6 +165,34 @@ export function ChatView({
     };
   }, [sendRef, send]);
 
+  // Chat mic (M02/M10d): the spoken question is transcribed, then sent like text.
+  async function handleVoice(audio: Blob) {
+    setSending(true);
+    try {
+      const form = new FormData();
+      form.append("audio", audio);
+      const res = await fetch("/api/transcribe", { method: "POST", body: form });
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !data.text) throw new Error(data.error ?? "Transcription failed");
+      setSending(false);
+      await send(data.text);
+    } catch (error) {
+      setSending(false);
+      hefesto.current?.play("doubt");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "hefesto",
+          text:
+            error instanceof Error && error.message
+              ? error.message
+              : "I couldn't hear that — try again.",
+        },
+      ]);
+    }
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
@@ -210,14 +238,14 @@ export function ChatView({
         )}
         {messages.map((message) => (
           <div key={message.id}>
-            <ChatMessageBubble message={message} />
+            <ChatMessageBubble message={message} wide={!headerInitial} />
 
             {message.role === "hefesto" && !!message.path?.length && (
-              <PathCard path={message.path} sources={message.sources} />
+              <PathCard path={message.path} sources={message.sources} wide={!headerInitial} />
             )}
 
             {message.role === "hefesto" && (message.qaId || (!message.path?.length && viaLabel(message))) && (
-              <div className="flex items-center gap-3 mt-2 ml-1">
+              <div className="flex items-center gap-3 mt-4">
                 {!message.path?.length && viaLabel(message) && (
                   <p className="text-[10.5px] text-muted">via: {viaLabel(message)}</p>
                 )}
@@ -227,7 +255,7 @@ export function ChatView({
                       type="button"
                       aria-label="Helpful"
                       onClick={() => giveFeedback(message, "up")}
-                      className="size-[34px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
+                      className="size-[36px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
                     >
                       <FeedbackArrow active={message.feedback === "up"} />
                     </button>
@@ -235,7 +263,7 @@ export function ChatView({
                       type="button"
                       aria-label="Not helpful"
                       onClick={() => giveFeedback(message, "down")}
-                      className="size-[34px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
+                      className="size-[36px] rounded-full bg-white shadow-[0px_8px_18px_rgba(51,31,10,0.12)] grid place-items-center"
                     >
                       <FeedbackArrow down active={message.feedback === "down"} />
                     </button>
@@ -266,8 +294,20 @@ export function ChatView({
           Think deeper
         </button>
       </div>
-      <div className="pb-2">
-        <Composer onSend={send} disabled={sending} />
+      <div className={`pb-2 ${headerInitial ? "-mx-2" : ""}`}>
+        <Composer
+          onSend={send}
+          onVoice={handleVoice}
+          onRecordingChange={(rec) => {
+            const h = hefesto.current;
+            if (!h) return;
+            if (rec) h.play("listening");
+            else h.stop();
+          }}
+          disabled={sending}
+          photo={Boolean(headerInitial)}
+          large={!headerInitial}
+        />
       </div>
     </div>
   );

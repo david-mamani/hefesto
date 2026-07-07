@@ -30,8 +30,10 @@ export function MobilePeople({ people }: { people: NetworkPerson[] }) {
 
   return (
     <>
-      <div className="glass rounded-full h-12 flex items-center gap-3 px-4 mt-[22px]">
-        <SearchIcon color="var(--ink)" />
+      <div className="rounded-full h-12 flex items-center gap-3 px-2 mt-4 bg-input border border-(--input-border)">
+        <span className="size-8 shrink-0 rounded-full bg-white grid place-items-center">
+          <SearchIcon color="var(--ink)" />
+        </span>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -40,7 +42,7 @@ export function MobilePeople({ people }: { people: NetworkPerson[] }) {
         />
       </div>
 
-      <div className="flex items-center gap-[10px] mt-[18px]">
+      <div className="flex items-center gap-[10px] mt-4">
         {FILTERS.map((f) => {
           const active = filter === f;
           return (
@@ -58,7 +60,7 @@ export function MobilePeople({ people }: { people: NetworkPerson[] }) {
         })}
       </div>
 
-      <div className="flex flex-col gap-[14px] mt-[22px] pb-[110px]">
+      <div className="flex flex-col gap-3 mt-4 pb-[110px]">
         {visible.length === 0 && (
           <p className="text-[13px] text-muted text-center mt-10">
             {people.length === 0
@@ -70,9 +72,9 @@ export function MobilePeople({ people }: { people: NetworkPerson[] }) {
           <Link
             key={person.personId}
             href={`/people/${person.personId}`}
-            className="glass rounded-[22px] h-[72px] flex items-center gap-[14px] px-[14px]"
+            className="glass rounded-[22px] h-[66px] flex items-center gap-[14px] px-[14px]"
           >
-            <RingAvatar initial={person.initial} size={44} />
+            <RingAvatar initial={person.initial} size={40} />
             <span className="min-w-0 flex-1">
               <span className="block font-semibold text-[15px] text-ink truncate">
                 {person.name}
@@ -81,7 +83,7 @@ export function MobilePeople({ people }: { people: NetworkPerson[] }) {
                 {subtitleFor(person) || "No details yet"}
               </span>
             </span>
-            <span className="text-[10.5px] text-muted self-start mt-[16px]">
+            <span className="text-[10.5px] text-muted self-start mt-[22px]">
               {compactGap(person.warmth.days)}
             </span>
           </Link>

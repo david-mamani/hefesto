@@ -78,13 +78,13 @@ export function DesktopHome({
       <AskBar />
 
       <div className="grid grid-cols-[330px_330px_minmax(360px,420px)] gap-5 mt-[26px] max-[1280px]:grid-cols-2 max-[1280px]:max-w-[680px]">
-        <section className="relative overflow-hidden h-[150px] rounded-[26px] bg-gradient-to-b from-peach to-orange shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] p-6 text-white">
+        <section className="relative overflow-hidden h-[150px] rounded-[26px] bg-gradient-to-b from-peach to-orange shadow-[0px_16px_38px_0px_rgba(51,31,10,0.16)] px-6 pt-[18px] pb-6 text-white">
           <p className="text-[10px] font-medium tracking-[1px] uppercase">People</p>
           <p className="font-light text-[56px] leading-none mt-2">{people.length}</p>
           <p className="text-[12px] absolute left-6 bottom-3">in your memory</p>
         </section>
 
-        <section className="relative h-[150px] rounded-[26px] bg-ember shadow-[0px_16px_38px_0px_rgba(51,31,10,0.2)] p-6">
+        <section className="relative h-[150px] rounded-[26px] bg-ember shadow-[0px_16px_38px_0px_rgba(51,31,10,0.2)] px-6 pt-[18px] pb-6">
           <p className="text-[10px] font-medium tracking-[1px] uppercase text-muted">
             To follow up
           </p>
@@ -192,7 +192,10 @@ export function DesktopHome({
           </div>
         </div>
 
-        <NetworkWidget people={people} />
+        {/* Aligns the widget top with the briefing card (the TODAY label sits above both) */}
+        <div className="mt-[29px] max-[1280px]:mt-0">
+          <NetworkWidget people={people} />
+        </div>
       </div>
 
       {briefingId && <Briefing personId={briefingId} onClose={() => setBriefingId(null)} />}

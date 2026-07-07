@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RingAvatar } from "@/components/RingAvatar";
 import { MobilePeople } from "@/components/people/MobilePeople";
@@ -11,7 +11,7 @@ export default async function PeoplePage({
 }: {
   searchParams: Promise<{ person?: string }>;
 }) {
-  // Desktop links use /people?person= — on mobile the card is its own page.
+  // Desktop links use /people?person= â€” on mobile the card is its own page.
   const { person } = await searchParams;
   if (person) redirect(`/people/${person}`);
 
@@ -29,7 +29,7 @@ export default async function PeoplePage({
     <main className="px-6">
       <header className="flex items-center gap-3 pt-12">
         <RingAvatar initial={initial} />
-        <h1 className="font-semibold text-[24px] text-ink">People</h1>
+        <h1 className="font-semibold text-[26px] text-ink">People</h1>
       </header>
 
       <MobilePeople people={people} />
