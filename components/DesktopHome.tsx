@@ -20,12 +20,10 @@ import { nudgesEnabled } from "@/lib/theme";
  * the "Your network" ember widget.
  */
 
-// Frame copy shown before the first capture exists.
+// Honest copy before the first capture exists — no fabricated people.
 const EMPTY = {
-  meetingTitle: "Coffee with Ana García",
-  meetingNote: "Dog Toby was sick · she's hiring a designer",
-  followUpTitle: "Reconnect with Jorge",
-  followUpNote: "No contact in 2 months · family",
+  meetingTitle: "Your first briefing",
+  meetingNote: "Capture someone you met — I'll prep you before you meet them again.",
 };
 
 function healthNote(series: number[], peopleCount: number): string {
@@ -142,6 +140,7 @@ export function DesktopHome({
             <button
               type="button"
               aria-label="Open briefing"
+              disabled={!featured}
               onClick={() => featured && setBriefingId(featured.personId)}
               className="absolute right-[24px] bottom-[16px] size-11 rounded-full bg-ember grid place-items-center"
             >

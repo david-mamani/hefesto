@@ -7,17 +7,17 @@ import { knowledgeLines } from "@/lib/person";
 
 export const dynamic = "force-dynamic";
 
-// Base copy from the Home frame; the Suggested card is replaced by the live
-// cold-contact nudge below when the user has people.
+// Copy shown before the first capture exists — honest, no fabricated people.
+// Both cards go live (real featured person / real cold-contact nudge) below.
 const PLACEHOLDERS = {
   greeting: "Tell me about someone you met — I'll remember them.",
   meeting: {
     time: "4:00",
     when: "PM · today",
-    title: "Coffee with Ana García",
-    note: "Dog Toby was sick · hiring a designer",
+    title: "Your first briefing",
+    note: "Capture someone — I'll prep you before you meet again",
   },
-  suggestion: { text: "Reconnect with Jorge — 2 months", cluster: "Family" },
+  suggestion: { text: "Capture your first person", cluster: "Start here" },
 };
 
 function titleCase(value: string): string {
